@@ -1,0 +1,31 @@
+name: Import Township Rollers source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - source.tar.gz
+      - .github/workflows/popa-bootstrap.yml
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack application source
+        run: |
+          tar -xzf source.tar.gz
+          rm source.tar.gz
+          rm .github/workflows/popa-bootstrap.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+      - name: Commit imported application
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Import Township Rollers membership platform"
+          git push
