@@ -1,0 +1,113 @@
+.fixture-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #d7e0ec;
+  border-top: 5px solid #f6b519;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #ffd22f 0 72%, #f6b519 100%);
+  margin: 0 0 16px;
+  box-shadow: 0 8px 24px #0c244b12;
+}
+.fixture-card::after {
+  content: "";
+  position: absolute;
+  right: -44px;
+  bottom: -70px;
+  width: 160px;
+  height: 160px;
+  border: 28px solid #0c244b0b;
+  border-radius: 50%;
+}
+.fixture-competition {
+  background: #0c244b;
+  color: #fff;
+  padding: 9px 15px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.fixture-matchup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 52px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 24px 16px 18px;
+}
+.fixture-team {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  min-width: 0;
+  border-radius: 12px;
+  padding: 8px;
+  transition: background-color .2s ease;
+}
+.fixture-card:hover .fixture-team,
+.fixture-card:focus-within .fixture-team { background:#0c4da2; }
+.fixture-card:hover .fixture-team strong,
+.fixture-card:focus-within .fixture-team strong { color:#fff; }
+.fixture-team strong {
+  font-size: 14px;
+  line-height: 1.25;
+  color: #0c244b;
+}
+.fixture-logo {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border: 3px solid #f6b519;
+  box-shadow: 0 5px 14px #0c244b20;
+  font-weight: 900;
+  font-size: 22px;
+  color: #fff;
+  clip-path: polygon(8% 0, 92% 0, 100% 72%, 50% 100%, 0 72%);
+}
+.rollers-logo {
+  background: #f6b519 url('/township-rollers-season-ticket.jpg') center 3% / 270% auto no-repeat;
+}
+.opponent-logo {
+  background: linear-gradient(145deg, #214f91, #0c244b);
+}
+.fixture-versus {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding-top: 20px;
+}
+.fixture-versus span {
+  font-size: 18px;
+  font-weight: 950;
+  color: #0c244b;
+}
+.fixture-versus small {
+  background: #f6b519;
+  color: #0c244b;
+  border-radius: 20px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 900;
+}
+.fixture-details {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  border-top: 1px solid #e1e7ef;
+  padding: 13px 16px;
+  background: #ffdf64;
+  color: #0c244b;
+  font-size: 13px;
+  font-weight: 650;
+  text-align: center;
+}
+@media (max-width: 420px) {
+  .fixture-logo { width: 64px; height: 64px; }
+  .fixture-matchup { grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr); padding-inline: 10px; }
+  .fixture-team strong { font-size: 13px; }
+}

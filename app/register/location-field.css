@@ -1,0 +1,56 @@
+.membership-location {
+  background: #0755d9 !important;
+  border-color: #0755d9 !important;
+  color: #fff !important;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.membership-location span {
+  color: inherit !important;
+}
+.membership-location:hover,
+.membership-location:focus-visible,
+.membership-location:active,
+.membership-location[data-state="open"] {
+  background: #ffcf24 !important;
+  border-color: #ffcf24 !important;
+  color: #06152f !important;
+  box-shadow: 0 0 0 3px rgba(255, 207, 36, .28);
+}
+.location-menu {
+  background: #0755d9 !important;
+  border: 2px solid #ffcf24 !important;
+  color: #fff !important;
+  box-shadow: 0 14px 30px rgba(6, 21, 47, .28) !important;
+}
+.location-option {
+  color: #fff !important;
+  font-weight: 700;
+}
+.location-option[data-highlighted],
+.location-option[data-state="checked"] {
+  background: #ffcf24 !important;
+  color: #06152f !important;
+}
+.gender-row {
+  width: 100%;
+  height: 46px;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  align-items: stretch;
+}
+.gender-row .radio-card {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  text-align: center;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1;
+}
+.gender-row .radio-card > button {
+  flex: 0 0 auto;
+  margin: 0;
+}

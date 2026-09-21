@@ -1,0 +1,1 @@
+.member-header-actions{display:flex;align-items:center;gap:16px}.member-header-actions a{color:#f6b519;text-decoration:none;font-weight:850;border-left:1px solid #ffffff35;padding-left:16px}.member-header-actions a:hover{text-decoration:underline}@media(max-width:520px){.member-header-actions>span{display:none}.member-header-actions a{border-left:0;padding-left:0}}
