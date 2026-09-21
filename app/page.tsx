@@ -1,4 +1,4 @@
-import { getChatGPTUser, chatGPTSignInPath, chatGPTSignOutPath } from "./chatgpt-auth";
+import { getChatGPTUser, chatGPTSignOutPath } from "./chatgpt-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export default async function PortalHome(){
    <div className="gateway-intro"><p className="eyebrow">CHOOSE YOUR ACCESS</p><h2>{user?`Welcome, ${user.displayName}`:"Membership access"}</h2><p>Members and administrators use the same secure platform with separate role-based dashboards.</p></div>
    <div className="gateway-grid">
     <article className="access-card member-access"><span className="access-number">01</span><h3>Member Login</h3><p>View your digital card, membership status, payment history, fixtures, standings and club notices.</p><a href="/member-login">Continue as member <span>→</span></a><small>New member? <a href="/register">Open an account</a></small></article>
-    <article className="access-card admin-access"><span className="access-number">02</span><h3>Admin Login</h3><p>Review registrations and payments, activate memberships, manage cards, codes, fixtures and communications.</p><a href={user?"/admin":chatGPTSignInPath("/admin")} target={user?undefined:"_top"}>Continue as administrator <span>→</span></a><small>Restricted to authorised club personnel.</small></article>
+    <article className="access-card admin-access"><span className="access-number">02</span><h3>Admin Login</h3><p>Review registrations and payments, activate memberships, manage cards, codes, fixtures and communications.</p><a href="/admin-login?return_to=/admin">Continue as administrator <span>→</span></a><small>Sign in with your authorised email and six-digit PIN.</small></article>
    </div>
   </section>
   <footer className="gateway-footer"><span>Township Rollers F.C. Membership</span><a href="/club">View public club updates</a></footer>
