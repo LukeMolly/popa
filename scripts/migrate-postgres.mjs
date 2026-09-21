@@ -9,6 +9,16 @@ const source = await readFile(new URL("../db/postgres.sql", import.meta.url), "u
 for (const statement of source.split(/;\s*(?:\n|$)/).map((value) => value.trim()).filter(Boolean)) {
   await sql.query(statement, []);
 }
+const legacyEmailLinks = [
+  ["thato lucas moleele", "lucasmoleele@gmail.com"],
+  ["botlhe lucas", "botlhelucas@gmail.com"],
+];
+for (const [fullName, email] of legacyEmailLinks) {
+  await sql.query(
+    "UPDATE members SET email = $1 WHERE lower(trim(first_name || ' ' || last_name)) = $2 AND (email = '' OR lower(email) = $1)",
+    [email, fullName],
+  );
+}
 const scrypt = promisify(scryptCallback);
 const legacyMembers = await sql.query("SELECT id FROM members WHERE password_hash = '' OR password_salt = ''", []);
 for (const member of legacyMembers) {
