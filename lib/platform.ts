@@ -32,7 +32,7 @@ export const DB = {
   async batch(statements: Statement[]) { return Promise.all(statements.map((statement) => statement.run())); },
 };
 export async function uploadReceipt(pathname: string, body: ArrayBuffer, contentType: string) {
-  const blob = await put(pathname, body, { access: "public", addRandomSuffix: true, contentType });
+  const blob = await put(pathname, body, { access: "private", addRandomSuffix: true, contentType });
   return blob.url;
 }
 export async function deleteReceipt(url: string) { await del(url); }
