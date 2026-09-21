@@ -2,9 +2,12 @@ import { DB } from "../../lib/platform";
 const env = { DB };
 import { redirect } from "next/navigation";
 import { requireChatGPTUser, chatGPTSignOutPath } from "../chatgpt-auth";
+import { getMemberSession } from "../../lib/member-auth";
 
 export const dynamic="force-dynamic";
 export default async function AccountPage(){
+ const memberSession=await getMemberSession();
+ if(memberSession?.passwordMustChange)redirect("/change-password");
  const user=await requireChatGPTUser("/account");
  const record=await env.DB.prepare("SELECT token FROM members WHERE lower(email)=lower(?) ORDER BY created_at DESC LIMIT 1").bind(user.email).first() as {token:string}|null;
  if(record?.token) redirect(`/member/${record.token}`);

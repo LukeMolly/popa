@@ -28,5 +28,5 @@ export async function createMemberSession(memberId: string) {
 export async function getMemberSession() {
   const token=(await cookies()).get(MEMBER_SESSION_COOKIE)?.value;
   if(!token)return null;
-  return DB.prepare("SELECT m.id,m.email,m.first_name AS firstName,m.last_name AS lastName FROM member_sessions s JOIN members m ON m.id=s.member_id WHERE s.token_hash=? AND s.expires_at>?").bind(sessionTokenHash(token),new Date().toISOString()).first<{id:string;email:string;firstName:string;lastName:string}>();
+  return DB.prepare("SELECT m.id,m.email,m.first_name AS firstName,m.last_name AS lastName,m.password_must_change AS passwordMustChange FROM member_sessions s JOIN members m ON m.id=s.member_id WHERE s.token_hash=? AND s.expires_at>?").bind(sessionTokenHash(token),new Date().toISOString()).first<{id:string;email:string;firstName:string;lastName:string;passwordMustChange:boolean}>();
 }
