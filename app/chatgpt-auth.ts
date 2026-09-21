@@ -1,9 +1,12 @@
 import { auth } from "../auth";
 import { redirect } from "next/navigation";
+import { getMemberSession } from "../lib/member-auth";
 
 export type ChatGPTUser = { userId: string; displayName: string; email: string; fullName: string | null };
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
+  const member = await getMemberSession();
+  if (member) return { userId: member.id, displayName: `${member.firstName} ${member.lastName}`, email: member.email, fullName: `${member.firstName} ${member.lastName}` };
   const session = await auth();
   const email = session?.user?.email;
   if (!email) return null;
