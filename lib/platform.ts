@@ -20,8 +20,8 @@ class Statement {
   constructor(private readonly query: string) {}
   bind(...values: unknown[]) { this.values = values; return this; }
   private async execute(): Promise<QueryResult> {
-    const sql = neon(connectionString(), { fullResults: true }) as unknown as (query: string, params?: unknown[]) => Promise<QueryResult>;
-    return sql(postgresQuery(this.query), this.values);
+    const sql = neon(connectionString(), { fullResults: true });
+    return sql.query(postgresQuery(this.query), this.values) as Promise<QueryResult>;
   }
   async first<T = Record<string, unknown>>(): Promise<T | null> { const result = await this.execute(); return (result.rows[0] as T | undefined) ?? null; }
   async all<T = Record<string, unknown>>() { const result = await this.execute(); return { results: result.rows as T[] }; }
