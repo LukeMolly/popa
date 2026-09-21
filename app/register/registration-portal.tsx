@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, CalendarDays, ChevronRight, CreditCard, FileCheck2, MapPin, ShieldCheck, UploadCloud, UserRound } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
 }
 
 export default function Portal({ accountEmail }: { accountEmail: string }) {
+  const dobRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState("register");
   const [gender, setGender] = useState("");
   const [location, setLocation] = useState("");
@@ -29,6 +30,14 @@ export default function Portal({ accountEmail }: { accountEmail: string }) {
   ]);
   const [draft, setDraft] = useState("");
   const expiry = useMemo(() => new Intl.DateTimeFormat("en-BW", { day: "2-digit", month: "short", year: "numeric" }).format(new Date("2027-07-31T23:59:59")), []);
+  const latestBirthDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  function openDatePicker() {
+    const input = dobRef.current;
+    if (!input) return;
+    input.focus();
+    try { input.showPicker?.(); } catch { /* The focused native date field remains usable. */ }
+  }
 
   useEffect(() => {
     const ctx = (document as Document & { modelContext?: { registerTool?: (tool: unknown, options?: { signal?: AbortSignal }) => void | Promise<void> } }).modelContext;
@@ -61,7 +70,7 @@ export default function Portal({ accountEmail }: { accountEmail: string }) {
         <section className="panel form-panel"><div className="section-heading"><div><span className="eyebrow">ACCOUNT OPENING</span><h2>Become a registered member</h2><p>Enter your personal details exactly as they appear on your identity document.</p></div><span className="secure"><ShieldCheck/> KYC protected</span></div>
           <form onSubmit={submit}><div className="form-grid">
             <Field label="Full name"><Input name="fullName" required placeholder="First name and surname" autoComplete="name"/></Field><Field label="Omang / Passport number"><Input name="idNumber" required placeholder="Identity number"/></Field>
-            <Field label="Date of birth"><Input name="dateOfBirth" required type="date"/></Field><Field label="Place of birth"><Input name="placeOfBirth" required placeholder="Town or village"/></Field>
+            <Field label="Date of birth" hint="Select your date from the calendar"><div className="date-picker-field"><Input ref={dobRef} name="dateOfBirth" required type="date" min="1900-01-01" max={latestBirthDate} autoComplete="bday"/><button type="button" onClick={openDatePicker} aria-label="Open date of birth calendar" title="Open calendar"><CalendarDays aria-hidden="true"/></button></div></Field><Field label="Place of birth"><Input name="placeOfBirth" required placeholder="Town or village" autoComplete="address-level2"/></Field>
             <Field label="Email address"><Input name="email" required type="email" defaultValue={accountEmail} placeholder="name@example.com"/></Field><Field label="Mobile number"><Input name="phone" required type="tel" placeholder="+267 7X XXX XXX"/></Field>
             <Field label="Create password"><Input name="password" required type="password" minLength={8} autoComplete="new-password" placeholder="8+ characters, letter and number"/></Field><Field label="Confirm password"><Input name="confirmPassword" required type="password" minLength={8} autoComplete="new-password" placeholder="Repeat password"/></Field>
             <Field label="Membership location"><Select value={location} onValueChange={setLocation} required><SelectTrigger className="select-full membership-location"><SelectValue placeholder="Select branch or town"/></SelectTrigger><SelectContent className="location-menu">{locations.map(item => <SelectItem className="location-option" key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></Field>
