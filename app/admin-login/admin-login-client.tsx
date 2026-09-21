@@ -1,6 +1,93 @@
 "use client";
-import {useState} from "react";
-export default function AdminLoginClient({returnTo}:{returnTo:string}){
- const [error,setError]=useState(""),[busy,setBusy]=useState(false);
- return <main className="admin-login-page"><section className="admin-login-card"><span className="mini-crest">TR</span><p className="eyebrow">TOWNSHIP ROLLERS FC</p><h1>Administrator sign in</h1><p>Use your authorised email and six-digit PIN, or continue with your ChatGPT account.</p><form onSubmit={async e=>{e.preventDefault();setBusy(true);setError("");const f=new FormData(e.currentTarget);try{const r=await fetch("/api/admin-pin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:f.get("email"),pin:f.get("pin")})}),d=await r.json();if(!r.ok)throw Error(d.error);location.assign(returnTo)}catch(e){setError(e instanceof Error?e.message:"Could not sign in")}finally{setBusy(false)}}}><label>Email<input name="email" type="email" autoComplete="username" required/></label><label>Six-digit PIN<input name="pin" type="password" inputMode="numeric" pattern="[0-9]{6}" minLength={6} maxLength={6} autoComplete="current-password" required/></label>{error&&<p className="form-error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?"Signing in…":"Sign in with PIN"}</button></form><div className="login-divider"><span>or</span></div><a className="chatgpt-login-button" href={`/signin-with-chatgpt?return_to=${encodeURIComponent(returnTo)}`} target="_top">Continue with ChatGPT</a><a className="login-back" href="/">← Back to portal</a></section></main>
+
+import { useState } from "react";
+
+export default function AdminLoginClient({ returnTo }: { returnTo: string }) {
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <main className="admin-login-page">
+      <section className="admin-login-card">
+        <span className="mini-crest">TR</span>
+        <p className="eyebrow">TOWNSHIP ROLLERS FC</p>
+        <h1>Administrator sign in</h1>
+        <p>
+          Use your authorised email and six-digit PIN, or continue securely with
+          Google.
+        </p>
+
+        <form
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setBusy(true);
+            setError("");
+            const form = new FormData(event.currentTarget);
+
+            try {
+              const response = await fetch("/api/admin-pin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  email: form.get("email"),
+                  pin: form.get("pin"),
+                }),
+              });
+              const data = await response.json();
+              if (!response.ok) throw new Error(data.error);
+              location.assign(returnTo);
+            } catch (signInError) {
+              setError(
+                signInError instanceof Error
+                  ? signInError.message
+                  : "Could not sign in",
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <label>
+            Email
+            <input name="email" type="email" autoComplete="username" required />
+          </label>
+          <label>
+            Six-digit PIN
+            <input
+              name="pin"
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              minLength={6}
+              maxLength={6}
+              autoComplete="current-password"
+              required
+            />
+          </label>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="primary" disabled={busy}>
+            {busy ? "Signing in…" : "Sign in with PIN"}
+          </button>
+        </form>
+
+        <div className="login-divider">
+          <span>or</span>
+        </div>
+        <a
+          className="chatgpt-login-button"
+          href={`/api/auth/signin?callbackUrl=${encodeURIComponent(returnTo)}`}
+          target="_top"
+        >
+          Continue with Google
+        </a>
+        <a className="login-back" href="/">
+          ← Back to portal
+        </a>
+      </section>
+    </main>
+  );
 }

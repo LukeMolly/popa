@@ -131,7 +131,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
         {canMembership ? <Link href="/admin">← Member registry</Link> : <span />}
         {role === "executive" && <a className="executive-admin-button" href="/admin-access">Manage administrators →</a>}
         <Link href="/club">View club page ↗</Link>
-        <button className="admin-signout" onClick={async()=>{await fetch("/api/admin-pin",{method:"DELETE"});location.assign("/signout-with-chatgpt?return_to=/")}}>Sign out</button>
+        <button className="admin-signout" onClick={async()=>{await fetch("/api/admin-pin",{method:"DELETE"});location.assign("/api/auth/signout?callbackUrl=/")}}>Sign out</button>
       </div>
       <div className="member-heading">
         <div>

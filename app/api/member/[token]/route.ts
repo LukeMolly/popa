@@ -1,4 +1,5 @@
-import { env } from "cloudflare:workers";
+import { DB, deleteReceipt, uploadReceipt } from "../../../../lib/platform";
+const env = { DB };
 import { getChatGPTUser } from "../../../chatgpt-auth";
 import { isClubAdmin } from "../../../admin-auth";
 export const dynamic="force-dynamic";
@@ -48,12 +49,11 @@ export async function POST(request:Request,{params}:Context){
   if(file.size<1||file.size>5*1024*1024)return Response.json({error:"Use a file under 5 MB."},{status:400});
   const type=file.type.toLowerCase();
   if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(type))return Response.json({error:"Upload a JPG, PNG, WebP or PDF."},{status:400});
-  if(!env.BUCKET)return Response.json({error:"Receipt storage is unavailable."},{status:503});
   const id=crypto.randomUUID(),key="receipts/"+id;
-  await env.BUCKET.put(key,await file.arrayBuffer(),{httpMetadata:{contentType:type}});
+  const receiptUrl=await uploadReceipt(key,await file.arrayBuffer(),type);
   try{
-   await env.DB.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at) VALUES (?,?,?,?,?,?,?,'submitted','',?,'')").bind(id,member.id,200,key,file.name.slice(0,200),type,reference,new Date().toISOString()).run();
-  }catch(e){await env.BUCKET.delete(key);throw e}
+   await env.DB.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at) VALUES (?,?,?,?,?,?,?,'submitted','',?,'')").bind(id,member.id,200,receiptUrl,file.name.slice(0,200),type,reference,new Date().toISOString()).run();
+  }catch(e){await deleteReceipt(receiptUrl);throw e}
   return Response.json({id,status:"submitted"},{status:201});
  }catch(e){console.error(e);return Response.json({error:"Could not submit proof. Please try again."},{status:500})}
 }

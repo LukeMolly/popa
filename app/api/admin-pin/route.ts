@@ -1,4 +1,5 @@
-import { env } from "cloudflare:workers";
+import { DB } from "../../../lib/platform";
+const env = { DB };
 import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, hashAdminPin, hashAdminSecret } from "../../admin-auth";
 export const dynamic="force-dynamic";

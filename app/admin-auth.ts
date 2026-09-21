@@ -1,5 +1,6 @@
 import { getChatGPTUser } from "./chatgpt-auth";
-import { env } from "cloudflare:workers";
+import { DB } from "../lib/platform";
+const env = { DB };
 import { cookies } from "next/headers";
 
 export type ClubAdminRole = "executive" | "membership" | "operations" | "coach";

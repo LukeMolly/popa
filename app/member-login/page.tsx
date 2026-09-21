@@ -1,4 +1,5 @@
-import {env} from "cloudflare:workers";
+import { DB } from "../../lib/platform";
+const env = { DB };
 import {chatGPTSignInPath, chatGPTSignOutPath, getChatGPTUser} from "../chatgpt-auth";
 import "./member-login.css";
 

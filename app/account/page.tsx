@@ -1,4 +1,5 @@
-import { env } from "cloudflare:workers";
+import { DB } from "../../lib/platform";
+const env = { DB };
 import { redirect } from "next/navigation";
 import { requireChatGPTUser, chatGPTSignOutPath } from "../chatgpt-auth";
 

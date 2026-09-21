@@ -1,4 +1,5 @@
-import { env } from "cloudflare:workers";
+import { DB } from "../../../lib/platform";
+const env = { DB };
 import { isClubAdmin } from "../../admin-auth";
 export const dynamic = "force-dynamic";
 export async function GET() {

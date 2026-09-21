@@ -1,4 +1,5 @@
-import { env } from "cloudflare:workers";
+import { DB } from "../../../lib/platform";
+const env = { DB };
 import { getClubAdmin, hashAdminPin } from "../../admin-auth";
 export const dynamic = "force-dynamic";
 const ownerEmail = "botlhelucas@gmail.com";

@@ -1,4 +1,5 @@
-import { env } from "cloudflare:workers";
+import { DB } from "../../../lib/platform";
+const env = { DB };
 import { isClubAdmin } from "../../admin-auth";
 export const dynamic = "force-dynamic";
 const clean = (x:unknown,n=200) => typeof x==="string" ? x.trim().slice(0,n) : "";

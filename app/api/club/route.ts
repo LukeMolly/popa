@@ -1,4 +1,5 @@
-import { env } from "cloudflare:workers";
+import { DB } from "../../../lib/platform";
+const env = { DB };
 import { officialMatch } from "../../official-match";
 export const dynamic="force-dynamic";
 export async function GET(){

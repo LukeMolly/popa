@@ -1,4 +1,5 @@
-import { env } from "cloudflare:workers";
+import { DB } from "../../../lib/platform";
+const env = { DB };
 import { notFound, redirect } from "next/navigation";
 import { requireChatGPTUser } from "../../chatgpt-auth";
 import { isClubAdmin } from "../../admin-auth";
