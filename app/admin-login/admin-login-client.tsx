@@ -12,10 +12,7 @@ export default function AdminLoginClient({ returnTo }: { returnTo: string }) {
         <span className="mini-crest">TR</span>
         <p className="eyebrow">TOWNSHIP ROLLERS FC</p>
         <h1>Administrator sign in</h1>
-        <p>
-          Use your authorised email and six-digit PIN, or continue securely with
-          Google.
-        </p>
+        <p>Use your authorised email and six-digit administrator PIN.</p>
 
         <form
           onSubmit={async (event) => {
@@ -74,16 +71,6 @@ export default function AdminLoginClient({ returnTo }: { returnTo: string }) {
           </button>
         </form>
 
-        <div className="login-divider">
-          <span>or</span>
-        </div>
-        <a
-          className="chatgpt-login-button"
-          href={`/api/auth/signin?callbackUrl=${encodeURIComponent(returnTo)}`}
-          target="_top"
-        >
-          Continue with Google
-        </a>
         <a className="login-back" href="/">
           ← Back to portal
         </a>
