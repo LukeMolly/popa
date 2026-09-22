@@ -36,7 +36,7 @@ export default function MemberPortal({params}:{params:Promise<{token:string}>}){
    setNotifications(data.notifications||[]);
   }catch(e){setError(e instanceof Error?e.message:"Could not load notifications")}finally{setNotificationsLoading(false)}
  }
- useEffect(()=>{if(token)void refreshNotifications()},[token]);
+ useEffect(()=>{if(!token)return;void refreshNotifications();const timer=window.setInterval(()=>void refreshNotifications(),30000);return()=>window.clearInterval(timer)},[token]);
 
  async function submitQuery(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();if(!token)return;setBusy(true);setError("");setSuccess("");
