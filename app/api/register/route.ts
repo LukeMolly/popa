@@ -65,7 +65,7 @@ export async function POST(request:Request){
   const passwordRecord=await newPasswordRecord(password);
   const parts=fullName.split(" "),firstName=parts.shift()||fullName,lastName=parts.join(" ")||"—";
   const id="TRFC-"+crypto.randomUUID().slice(0,8).toUpperCase(),token=crypto.randomUUID(),createdAt=new Date(),expiresAt=calculateMembershipExpiry(settings,createdAt);
-  const receiptKey="payment-proofs/"+id+"/"+proof.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+  const receiptKey="payment-proofs/"+paymentMethod+"/"+id+"/"+proof.name.replace(/[^a-zA-Z0-9._-]/g,"_");
   receiptUrl=await uploadReceipt(receiptKey,await proof.arrayBuffer(),proof.type);
   const paymentId=crypto.randomUUID();
 
