@@ -4,15 +4,25 @@ import {useState} from "react";
 export default function ForgotPasswordClient(){
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[error,setError]=useState("");
  async function submit(e:React.FormEvent<HTMLFormElement>){
-  e.preventDefault();setBusy(true);setMessage("");setError("");
-  const form=new FormData(e.currentTarget);
+  e.preventDefault();
+  const formElement=e.currentTarget;
+  const form=new FormData(formElement);
+  setBusy(true);setMessage("");setError("");
   try{
-   const response=await fetch("/api/password-recovery",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:form.get("email"),memberId:form.get("memberId")})});
+   const response=await fetch("/api/password-recovery",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({email:form.get("email"),memberId:form.get("memberId")})
+   });
    const data=await response.json() as {message?:string};
    if(!response.ok)throw Error("Could not submit recovery request.");
    setMessage(data.message||"Recovery request submitted.");
-   e.currentTarget.reset();
-  }catch(err){setError(err instanceof Error?err.message:"Could not submit recovery request.")}finally{setBusy(false)}
+   formElement.reset();
+  }catch(err){
+   setError(err instanceof Error?err.message:"Could not submit recovery request.");
+  }finally{
+   setBusy(false);
+  }
  }
  return <form className="member-password-form" onSubmit={submit}>
   <label>Membership ID<input name="memberId" required placeholder="TRFC-XXXXXXXX" maxLength={20}/></label>
