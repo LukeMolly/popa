@@ -8,6 +8,7 @@ import {Button} from "@/components/ui/button";
 import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from "@/components/ui/select";
 import {RadioGroup,RadioGroupItem} from "@/components/ui/radio-group";
 import type { MembershipSettings } from "../../lib/membership";
+import { PAYMENT_METHODS } from "../../lib/payment-methods";
 
 const locations=["Gaborone","Molepolole","Mochudi","Francistown","Maun","Palapye","Lobatse","Other"];
 
@@ -18,13 +19,14 @@ function niceDate(value:string){return new Intl.DateTimeFormat("en-BW",{day:"2-d
 
 export default function Portal({accountEmail,settings}:{accountEmail:string;settings:MembershipSettings}){
  const dobRef=useRef<HTMLInputElement>(null);
- const [active,setActive]=useState("register"),[gender,setGender]=useState(""),[location,setLocation]=useState(""),[fileName,setFileName]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState<{membershipId:string;expiresAt:string;verificationEmailSent:boolean}|null>(null),[error,setError]=useState("");
+ const [active,setActive]=useState("register"),[gender,setGender]=useState(""),[location,setLocation]=useState(""),[paymentMethod,setPaymentMethod]=useState(""),[paymentMethodDetail,setPaymentMethodDetail]=useState(""),[fileName,setFileName]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState<{membershipId:string;expiresAt:string;verificationEmailSent:boolean}|null>(null),[error,setError]=useState("");
  const latestBirthDate=useMemo(()=>new Date().toISOString().slice(0,10),[]);
+ const selectedPayment=PAYMENT_METHODS.find(method=>method.code===paymentMethod);
 
  function openDatePicker(){const input=dobRef.current;if(!input)return;input.focus();try{input.showPicker?.()}catch{}}
  async function submit(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();setBusy(true);setError("");
-  const form=new FormData(e.currentTarget);form.set("gender",gender);form.set("membershipLocation",location);
+  const form=new FormData(e.currentTarget);form.set("gender",gender);form.set("membershipLocation",location);form.set("paymentMethod",paymentMethod);form.set("paymentMethodDetail",paymentMethodDetail);
   try{
    const response=await fetch("/api/register",{method:"POST",body:form});
    const data=await response.json() as {membershipId?:string;expiresAt?:string;error?:string;verificationEmailSent?:boolean};
@@ -57,7 +59,27 @@ export default function Portal({accountEmail,settings}:{accountEmail:string;sett
        <Field label="Membership location"><Select value={location} onValueChange={setLocation} required><SelectTrigger className="select-full membership-location"><SelectValue placeholder="Select branch or town"/></SelectTrigger><SelectContent className="location-menu">{locations.map(item=><SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></Field>
        <Field label="Gender"><RadioGroup value={gender} onValueChange={setGender} className="gender-row" required>{["Female","Male","Other"].map(item=><label className="radio-card" key={item}><RadioGroupItem value={item.toLowerCase()}/>{item}</label>)}</RadioGroup></Field>
       </div>
-      <div className="payment-box"><div className="payment-copy"><span className="icon-tile"><CreditCard/></span><div><strong>Season registration fee</strong><p>A once-off P{settings.membershipFee} payment covers the configured membership season.</p></div><b>P{settings.membershipFee}</b></div><label className="upload-zone"><UploadCloud/><span><strong>{fileName||"Upload proof of payment"}</strong><small>PDF, JPG or PNG · Maximum 5 MB</small></span><Input name="proof" required type="file" accept=".pdf,image/jpeg,image/png" onChange={e=>setFileName(e.target.files?.[0]?.name||"")}/></label></div>
+      <div className="payment-box">
+       <div className="payment-copy"><span className="icon-tile"><CreditCard/></span><div><strong>Season registration fee</strong><p>A once-off P{settings.membershipFee} payment covers the configured membership season.</p></div><b>P{settings.membershipFee}</b></div>
+       <div style={{margin:"18px 0"}}>
+        <strong style={{display:"block",marginBottom:8}}>Choose where/how you paid</strong>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
+         {PAYMENT_METHODS.map(method=><button key={method.code} type="button" onClick={()=>{setPaymentMethod(method.code);if(method.code!=="other")setPaymentMethodDetail("")}} style={{padding:"14px",borderRadius:10,border:paymentMethod===method.code?"2px solid #f6b519":"1px solid #d9dee8",background:paymentMethod===method.code?"#fff8df":"#fff",fontWeight:700,cursor:"pointer"}}>{method.label}</button>)}
+        </div>
+        <input type="hidden" name="paymentMethod" value={paymentMethod}/>
+        {selectedPayment&&selectedPayment.code!=="other"&&<div style={{marginTop:12,padding:14,borderRadius:10,background:"#f7f9fc",lineHeight:1.55}}>
+         <strong>{selectedPayment.accountName}</strong><br/>
+         <span>{selectedPayment.bankName}</span><br/>
+         <span>Account: <b>{selectedPayment.accountNumber}</b></span><br/>
+         <span>{selectedPayment.branch} · Branch code: <b>{selectedPayment.branchCode}</b></span><br/>
+         <span>SWIFT: <b>{selectedPayment.swiftCode}</b></span>
+        </div>}
+        {paymentMethod==="other"&&<label style={{display:"block",marginTop:12}}>Other payment method<input name="paymentMethodDetail" required value={paymentMethodDetail} onChange={e=>setPaymentMethodDetail(e.target.value)} maxLength={120} placeholder="e.g. cash deposit, mobile transfer, other bank"/></label>}
+        {!paymentMethod&&<small style={{display:"block",marginTop:8}}>Select FNB, Stanbic Bank or Other before uploading proof.</small>}
+       </div>
+       <label style={{display:"block",marginBottom:12}}>Payment reference (optional)<Input name="reference" maxLength={100} placeholder="Transaction / deposit reference"/></label>
+       <label className="upload-zone"><UploadCloud/><span><strong>{fileName||"Upload proof of payment"}</strong><small>PDF, JPG or PNG · Maximum 5 MB</small></span><Input name="proof" required type="file" accept=".pdf,image/jpeg,image/png" onChange={e=>setFileName(e.target.files?.[0]?.name||"")}/></label>
+      </div>
       {error&&<p className="error" role="alert">{error}</p>}
       <label className="consent"><input required type="checkbox"/> I confirm that these details are accurate and consent to their use for membership verification and communication.</label>
       <Button type="submit" size="lg" className="submit-button" disabled={busy||!settings.registrationOpen}>{busy?"Submitting…":"Submit registration"}<ChevronRight/></Button>
