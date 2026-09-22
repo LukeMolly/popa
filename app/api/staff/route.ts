@@ -3,6 +3,7 @@ import { getClubAdmin } from "../../admin-auth";
 import { calculateMembershipExpiry, expireDueMemberships, getMembershipSettings } from "../../../lib/membership";
 import { writeAudit } from "../../../lib/audit";
 import { emailMemberPaymentDecision } from "../../../lib/account-emails";
+import { notifyPaymentDecision } from "../../../lib/member-notifications";
 const env = { DB };
 
 export const dynamic="force-dynamic";
@@ -47,6 +48,7 @@ export async function POST(request:Request){
    await writeAudit(admin,status==="approved"?"payment_approved":"payment_rejected","payment",id,{status:"submitted",amount:payment.amount},{status,note,reviewedBy:admin.email},note);
    if(status==="approved")await writeAudit(admin,"membership_activated","member",payment.memberId,member,{status:"active",expiresAt},"Activated after approved payment");
    await emailMemberPaymentDecision(member,status as "approved"|"rejected",payment.amount,expiresAt,note);
+   await notifyPaymentDecision(payment.memberId,status as "approved"|"rejected",note,expiresAt);
    return Response.json({ok:true,expiresAt});
   }
 
