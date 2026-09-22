@@ -1,6 +1,7 @@
 import { DB } from "./platform";
 import { writeAudit } from "./audit";
 import { emailMemberExpired } from "./account-emails";
+import { notifyMembershipStatus } from "./member-notifications";
 
 export type MembershipSettings={
  membershipValidityDays:number;
@@ -39,6 +40,7 @@ export async function expireDueMemberships(){
   await DB.prepare("UPDATE members SET status='expired' WHERE id=? AND status='active'").bind(member.id).run();
   await writeAudit({email:"system",name:"System",role:"automation"},"membership_expired","member",member.id,{status:"active",expiresAt:member.expiresAt},{status:"expired",expiresAt:member.expiresAt},"Automatic expiry");
   if(member.email)await emailMemberExpired(member,member.expiresAt);
+  await notifyMembershipStatus(member.id,"expired",member.expiresAt);
  }
  return due.results.length;
 }
