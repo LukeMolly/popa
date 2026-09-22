@@ -4,6 +4,7 @@ import { calculateMembershipExpiry, getMembershipSettings } from "../../../lib/m
 import { writeAudit } from "../../../lib/audit";
 import { issueEmailVerification, notifyAdminsOfRegistration } from "../../../lib/email-verification";
 import { PAYMENT_METHOD_CODES } from "../../../lib/payment-methods";
+import { createMemberNotification } from "../../../lib/member-notifications";
 const env = { DB };
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,15 @@ export async function POST(request:Request){
   ]);
 
   await writeAudit({email,name:fullName,role:"member"},"member_registered","member",id,undefined,{status:"pending",membershipLocation,gender,expiresAt,paymentMethod,paymentMethodDetail},"Public registration");
+  await createMemberNotification({
+   memberId:id,
+   title:"Registration received",
+   body:"Your Township Rollers membership application has been received. Your payment proof is awaiting review by the membership office.",
+   category:"membership_status",
+   createdByRole:"system",
+   actionRequired:false,
+   status:"open"
+  });
   const memberForEmail={id,email,firstName,lastName,membershipLocation};
   const [verificationResult]=await Promise.all([
    issueEmailVerification(memberForEmail),
