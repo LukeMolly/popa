@@ -15,7 +15,7 @@ export async function GET(){
  try{
   await expireDueMemberships();
   const [payments,settings]=await Promise.all([
-   env.DB.prepare("SELECT p.id,p.member_id AS memberId,m.first_name AS firstName,m.last_name AS lastName,p.amount,p.reference,p.receipt_name AS receiptName,p.status,p.note,p.created_at AS createdAt,p.reviewed_at AS reviewedAt,p.reviewed_by AS reviewedBy FROM payments p JOIN members m ON m.id=p.member_id ORDER BY p.created_at DESC").all(),
+   env.DB.prepare("SELECT p.id,p.member_id AS memberId,m.first_name AS firstName,m.last_name AS lastName,p.amount,p.reference,p.receipt_name AS receiptName,p.payment_method AS paymentMethod,p.payment_method_detail AS paymentMethodDetail,p.status,p.note,p.created_at AS createdAt,p.reviewed_at AS reviewedAt,p.reviewed_by AS reviewedBy FROM payments p JOIN members m ON m.id=p.member_id ORDER BY p.created_at DESC").all(),
    getMembershipSettings(),
   ]);
   return Response.json({payments:payments.results,settings},{headers:{"Cache-Control":"no-store"}});
