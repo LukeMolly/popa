@@ -2,12 +2,13 @@
 import {useCallback,useEffect,useMemo,useState} from "react";
 import QRCode from "qrcode";
 import {ArrowLeft,Copy,Download,KeyRound,Plus,Search,Users} from "lucide-react";
+import { paymentMethodLabel } from "../lib/payment-methods";
 
 type Member={
  id:string;firstName:string;lastName:string;phone:string;email:string;status:string;expiresAt:string;token:string;createdAt:string;
  idNumber?:string;dateOfBirth?:string;placeOfBirth?:string;membershipLocation?:string;gender?:string;passwordMustChange?:boolean;
 };
-type Payment={id:string;memberId:string;amount:number;reference:string;status:string;note:string;createdAt:string;reviewedAt:string;reviewedBy?:string};
+type Payment={id:string;memberId:string;amount:number;reference:string;paymentMethod?:string;paymentMethodDetail?:string;status:string;note:string;createdAt:string;reviewedAt:string;reviewedBy?:string};
 type Audit={id:string;actorEmail:string;actorName:string;actorRole:string;action:string;entityType:string;entityId:string;note:string;createdAt:string};
 type Recovery={id:string;memberId:string;email:string;status:string;requestedAt:string;resolvedAt:string;resolvedBy:string;firstName:string;lastName:string};
 type Settings={seasonName:string;seasonStartDate:string;seasonEndDate:string;membershipFee:number;registrationOpen:boolean;membershipValidityDays:number;expiryReminderDays:number};
@@ -81,8 +82,8 @@ export default function MemberRegistry(){
  const regionSummary=useMemo(()=>regions.map(region=>({region,total:data.members.filter(m=>(m.membershipLocation||"Unspecified")===region).length})).sort((a,b)=>b.total-a.total),[regions,data.members]);
 
  function downloadFilteredCsv(){
-  const header=["Member ID","First Name","Last Name","Email","Phone","Status","Date of Birth","Age","Region","Gender","Expiry Date","Latest Payment Status","Latest Payment Amount","Created At"];
-  const rows=list.map(m=>{const p=latestPaymentByMember.get(m.id);return [m.id,m.firstName,m.lastName,m.email,m.phone,effectiveStatus(m),m.dateOfBirth||"",ageFromDob(m.dateOfBirth)??"",m.membershipLocation||"",m.gender||"",m.expiresAt||"",p?.status||"",p?.amount||"",m.createdAt]});
+  const header=["Member ID","First Name","Last Name","Email","Phone","Status","Date of Birth","Age","Region","Gender","Expiry Date","Latest Payment Method","Latest Payment Status","Latest Payment Amount","Created At"];
+  const rows=list.map(m=>{const p=latestPaymentByMember.get(m.id);return [m.id,m.firstName,m.lastName,m.email,m.phone,effectiveStatus(m),m.dateOfBirth||"",ageFromDob(m.dateOfBirth)??"",m.membershipLocation||"",m.gender||"",m.expiresAt||"",p?paymentMethodLabel(p.paymentMethod||"",p.paymentMethodDetail||""):"",p?.status||"",p?.amount||"",m.createdAt]});
   const blob=new Blob([[header,...rows].map(row=>row.map(csv).join(",")).join("\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
   a.href=url;a.download="township-rollers-filtered-members.csv";a.click();URL.revokeObjectURL(url);
  }
@@ -124,7 +125,7 @@ export default function MemberRegistry(){
      </section>
     </div>
 
-    <section className="panel"><h2>Payment history</h2><div className="table-wrap"><table><thead><tr><th>Date</th><th>Amount</th><th>Reference</th><th>Status</th><th>Reviewed by</th><th>Note</th></tr></thead><tbody>{data.payments.filter(p=>p.memberId===selected.id).map(p=><tr key={p.id}><td>{new Date(p.createdAt).toLocaleString("en-BW")}</td><td>P{p.amount}</td><td>{p.reference||"—"}</td><td><Badge status={p.status}/></td><td>{p.reviewedBy||"—"}</td><td>{p.note||"—"}</td></tr>)}</tbody></table>{!data.payments.some(p=>p.memberId===selected.id)&&<div className="empty">No payments recorded.</div>}</div></section>
+    <section className="panel"><h2>Payment history</h2><div className="table-wrap"><table><thead><tr><th>Date</th><th>Amount</th><th>Payment method</th><th>Reference</th><th>Status</th><th>Reviewed by</th><th>Note</th></tr></thead><tbody>{data.payments.filter(p=>p.memberId===selected.id).map(p=><tr key={p.id}><td>{new Date(p.createdAt).toLocaleString("en-BW")}</td><td>P{p.amount}</td><td>{paymentMethodLabel(p.paymentMethod||"",p.paymentMethodDetail||"")}</td><td>{p.reference||"—"}</td><td><Badge status={p.status}/></td><td>{p.reviewedBy||"—"}</td><td>{p.note||"—"}</td></tr>)}</tbody></table>{!data.payments.some(p=>p.memberId===selected.id)&&<div className="empty">No payments recorded.</div>}</div></section>
    </>:<>
     <div className="page-head"><div><p className="eyebrow">MEMBERSHIP DASHBOARD</p><h1>Members</h1><p className="sub">{data.settings.seasonName} · Registration {data.settings.registrationOpen?"open":"closed"} · Fee P{data.settings.membershipFee}</p></div><div style={{display:"flex",gap:10,flexWrap:"wrap"}}><button className="secondary" onClick={downloadFilteredCsv}><Download size={18}/> Filtered CSV</button><a className="secondary" href="/admin/reports">Print / PDF report</a><button className="primary" onClick={()=>setShowForm(!showForm)}><Plus size={18}/> Add member</button></div></div>
 
