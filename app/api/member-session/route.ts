@@ -12,9 +12,10 @@ export async function POST(request:Request){
  const now=new Date(),attempt=await DB.prepare("SELECT failed_count AS failedCount,locked_until AS lockedUntil FROM member_login_attempts WHERE email=?").bind(email).first<{failedCount:number;lockedUntil:string}>();
  if(attempt?.lockedUntil&&new Date(attempt.lockedUntil)>now)return fail("Too many attempts. Try again in 15 minutes.",429);
 
- const member=await DB.prepare("SELECT id,password_salt AS passwordSalt,password_hash AS passwordHash,password_must_change AS passwordMustChange FROM members WHERE lower(email)=lower(?) LIMIT 1").bind(email).first<{id:string;passwordSalt:string;passwordHash:string;passwordMustChange:boolean}>();
+ const member=await DB.prepare("SELECT id,password_salt AS passwordSalt,password_hash AS passwordHash,password_must_change AS passwordMustChange,email_verified_at AS emailVerifiedAt FROM members WHERE lower(email)=lower(?) LIMIT 1").bind(email).first<{id:string;passwordSalt:string;passwordHash:string;passwordMustChange:boolean;emailVerifiedAt:string}>();
  if(!member)return fail("Incorrect email address or password.",401);
  if(!member.passwordHash||!member.passwordSalt)return fail("Password setup is required. Use Forgot password to request recovery.",401);
+ if(!member.emailVerifiedAt)return Response.json({error:"Verify your email address before signing in.",needsVerification:true},{status:403});
 
  if(!(await passwordMatches(password,member.passwordSalt,member.passwordHash))){
   const failed=(attempt?.failedCount||0)+1,lockedUntil=failed>=5?new Date(now.getTime()+15*60*1000).toISOString():"";
