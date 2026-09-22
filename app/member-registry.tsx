@@ -11,6 +11,8 @@ type Member={
 type Payment={id:string;memberId:string;amount:number;reference:string;paymentMethod?:string;paymentMethodDetail?:string;status:string;note:string;createdAt:string;reviewedAt:string;reviewedBy?:string};
 type Audit={id:string;actorEmail:string;actorName:string;actorRole:string;action:string;entityType:string;entityId:string;note:string;createdAt:string};
 type Recovery={id:string;memberId:string;email:string;status:string;requestedAt:string;resolvedAt:string;resolvedBy:string;firstName:string;lastName:string};
+type NotificationMessage={id:string;notificationId:number;senderRole:string;senderEmail:string;senderName:string;body:string;createdAt:string};
+type AdminNotification={id:number;memberId:string;firstName:string;lastName:string;email:string;title:string;body:string;category:string;createdByRole:string;status:string;actionRequired:boolean;unread:boolean;createdAt:string;updatedAt:string;lastSenderRole:string;messages:NotificationMessage[]};
 type Settings={seasonName:string;seasonStartDate:string;seasonEndDate:string;membershipFee:number;registrationOpen:boolean;membershipValidityDays:number;expiryReminderDays:number};
 type Data={members:Member[];payments:Payment[];audits:Audit[];recoveryRequests:Recovery[];settings:Settings};
 const defaultSettings:Settings={seasonName:"2026 / 2027",seasonStartDate:"2026-09-01",seasonEndDate:"2027-07-31",membershipFee:200,registrationOpen:true,membershipValidityDays:334,expiryReminderDays:7};
@@ -22,8 +24,15 @@ function effectiveStatus(m:Member){return m.status==="active"&&m.expiresAt&&m.ex
 function csv(value:unknown){const s=String(value??"");return '"'+s.replace(/"/g,'""')+'"'}
 
 export default function MemberRegistry(){
- const [data,setData]=useState<Data>(empty),[loading,setLoading]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState(""),[query,setQuery]=useState(""),[statusFilter,setStatusFilter]=useState("all"),[regionFilter,setRegionFilter]=useState("all"),[genderFilter,setGenderFilter]=useState("all"),[minAge,setMinAge]=useState(""),[maxAge,setMaxAge]=useState(""),[selected,setSelected]=useState<Member|null>(null),[qr,setQr]=useState(""),[showForm,setShowForm]=useState(false),[busy,setBusy]=useState(false);
+ const [data,setData]=useState<Data>(empty),[notifications,setNotifications]=useState<AdminNotification[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState(""),[query,setQuery]=useState(""),[statusFilter,setStatusFilter]=useState("all"),[regionFilter,setRegionFilter]=useState("all"),[genderFilter,setGenderFilter]=useState("all"),[minAge,setMinAge]=useState(""),[maxAge,setMaxAge]=useState(""),[selected,setSelected]=useState<Member|null>(null),[qr,setQr]=useState(""),[showForm,setShowForm]=useState(false),[busy,setBusy]=useState(false);
 
+ const loadNotifications=useCallback(async()=>{
+  try{
+   const r=await fetch("/api/notifications",{cache:"no-store"}),v=await r.json() as {notifications?:AdminNotification[];error?:string};
+   if(!r.ok)throw Error(v.error||"Could not load notifications");
+   setNotifications(v.notifications||[]);
+  }catch(e){setError(e instanceof Error?e.message:"Could not load notification centre")}
+ },[]);
  const load=useCallback(async()=>{
   try{
    const r=await fetch("/api/data",{cache:"no-store"}),v=await r.json() as Data&{error?:string};
@@ -31,7 +40,7 @@ export default function MemberRegistry(){
    setData({...empty,...v,settings:v.settings||defaultSettings});setError("");
   }catch(e){setError(e instanceof Error?e.message:"Could not load records")}finally{setLoading(false)}
  },[]);
- useEffect(()=>{void load()},[load]);
+ useEffect(()=>{void load();void loadNotifications()},[load,loadNotifications]);
  useEffect(()=>{if(!selected)return;QRCode.toDataURL(location.origin+"/verify/"+selected.token,{width:256,margin:2,color:{dark:"#102b5a",light:"#ffffff"}}).then(setQr).catch(()=>setQr(""))},[selected]);
 
  async function send(payload:Record<string,unknown>,success:string){
@@ -42,6 +51,16 @@ export default function MemberRegistry(){
    if(!r.ok)throw Error(v.error||"Could not save");
    setNotice(success);await load();return v;
   }catch(e){setError(e instanceof Error?e.message:"Could not save");return null}finally{setBusy(false)}
+ }
+
+ async function notificationAction(payload:Record<string,unknown>,success:string){
+  setBusy(true);setError("");setNotice("");
+  try{
+   const r=await fetch("/api/notifications",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+   const v=await r.json() as {error?:string};
+   if(!r.ok)throw Error(v.error||"Could not update notification");
+   setNotice(success);await loadNotifications();return true;
+  }catch(e){setError(e instanceof Error?e.message:"Could not update notification");return false}finally{setBusy(false)}
  }
 
  async function resetPassword(member:Member){
@@ -89,6 +108,8 @@ export default function MemberRegistry(){
  }
 
  const selectedRecovery=selected?pendingRecoveries.find(r=>r.memberId===selected.id):undefined;
+ const selectedNotifications=selected?notifications.filter(n=>n.memberId===selected.id):[];
+ const unreadNotifications=notifications.filter(n=>n.unread).length;
 
  return <div className="app">
   <aside className="rail">
@@ -126,11 +147,41 @@ export default function MemberRegistry(){
     </div>
 
     <section className="panel"><h2>Payment history</h2><div className="table-wrap"><table><thead><tr><th>Date</th><th>Amount</th><th>Payment method</th><th>Reference</th><th>Status</th><th>Reviewed by</th><th>Note</th></tr></thead><tbody>{data.payments.filter(p=>p.memberId===selected.id).map(p=><tr key={p.id}><td>{new Date(p.createdAt).toLocaleString("en-BW")}</td><td>P{p.amount}</td><td>{paymentMethodLabel(p.paymentMethod||"",p.paymentMethodDetail||"")}</td><td>{p.reference||"—"}</td><td><Badge status={p.status}/></td><td>{p.reviewedBy||"—"}</td><td>{p.note||"—"}</td></tr>)}</tbody></table>{!data.payments.some(p=>p.memberId===selected.id)&&<div className="empty">No payments recorded.</div>}</div></section>
+
+    <section className="panel">
+     <div className="panel-head"><div><h2>Member communication</h2><p>Send an in-app notice, request information, or reply to this member.</p></div><span className="badge pending">{selectedNotifications.filter(n=>n.unread).length} unread</span></div>
+     <form className="office-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const ok=await notificationAction({action:"send",memberId:selected.id,category:f.get("category"),title:f.get("title"),body:f.get("body"),actionRequired:f.get("actionRequired")==="on"},"Notification sent to "+selected.firstName);if(ok)e.currentTarget.reset()}}>
+      <div className="form-grid">
+       <label>Type<select name="category" defaultValue="admin_request"><option value="admin_request">Request / action needed</option><option value="general">General notification</option></select></label>
+       <label>Subject<input name="title" required maxLength={160} placeholder="e.g. Please update your ID details"/></label>
+      </div>
+      <label>Message<textarea name="body" required maxLength={2000} rows={4} placeholder="Explain what the membership office needs from the member."/></label>
+      <label style={{display:"flex",gap:8,alignItems:"center"}}><input type="checkbox" name="actionRequired" defaultChecked/> Mark as action required</label>
+      <button className="primary" disabled={busy}>Send to member</button>
+     </form>
+
+     <div style={{display:"grid",gap:12,marginTop:18}}>
+      {!selectedNotifications.length&&<p className="muted">No in-app conversations with this member yet.</p>}
+      {selectedNotifications.map(n=><article key={n.id} style={{border:"1px solid #e3e7ef",borderRadius:12,padding:14,background:n.unread?"#fff9e8":"#fff"}}>
+       <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><small style={{textTransform:"uppercase",fontWeight:700}}>{n.category.replaceAll("_"," ")}</small><h3 style={{margin:"4px 0"}}>{n.title}</h3></div><div style={{display:"flex",gap:6}}>{n.actionRequired&&<span className="badge pending">Action required</span>}<span className={"badge "+(n.status==="resolved"?"active":"pending")}>{n.status}</span></div></div>
+       <p>{n.body}</p><small className="muted">{new Date(n.createdAt).toLocaleString("en-BW")}</small>
+       {n.messages.map(m=><div key={m.id} style={{marginTop:10,padding:"10px 12px",borderRadius:9,background:m.senderRole==="member"?"#f6f8fb":"#eef4ff"}}><strong>{m.senderRole==="member"?selected.firstName+" "+selected.lastName:"Membership office"}</strong><p style={{margin:"5px 0"}}>{m.body}</p><small className="muted">{new Date(m.createdAt).toLocaleString("en-BW")}</small></div>)}
+       {n.status!=="resolved"&&<form style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}} onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const ok=await notificationAction({action:"reply",notificationId:n.id,body:f.get("body"),actionRequired:f.get("actionRequired")==="on"},"Reply sent");if(ok)e.currentTarget.reset()}}><input name="body" required maxLength={2000} placeholder="Reply to member" style={{flex:"1 1 260px"}}/><label style={{display:"flex",alignItems:"center",gap:5}}><input type="checkbox" name="actionRequired"/> Action required</label><button className="secondary" disabled={busy}>Reply</button><button type="button" className="secondary" disabled={busy} onClick={()=>void notificationAction({action:"resolve",notificationId:n.id},"Conversation resolved")}>Resolve</button></form>}
+      </article>)}
+     </div>
+    </section>
    </>:<>
     <div className="page-head"><div><p className="eyebrow">MEMBERSHIP DASHBOARD</p><h1>Members</h1><p className="sub">{data.settings.seasonName} · Registration {data.settings.registrationOpen?"open":"closed"} · Fee P{data.settings.membershipFee}</p></div><div style={{display:"flex",gap:10,flexWrap:"wrap"}}><button className="secondary" onClick={downloadFilteredCsv}><Download size={18}/> Filtered CSV</button><a className="secondary" href="/admin/reports">Print / PDF report</a><button className="primary" onClick={()=>setShowForm(!showForm)}><Plus size={18}/> Add member</button></div></div>
 
     <div className="stats"><div><small>TOTAL MEMBERS</small><strong>{totals.total}</strong></div><div><small>ACTIVE</small><strong>{totals.active}</strong></div><div><small>PENDING</small><strong>{totals.pending}</strong></div></div>
     <div className="stats"><div><small>SUSPENDED</small><strong>{totals.suspended}</strong></div><div><small>EXPIRED</small><strong>{totals.expired}</strong></div><div><small>APPROVED REVENUE</small><strong>P{totals.revenue.toLocaleString("en-BW")}</strong><span className="muted">{totals.pendingPayments} payment(s) awaiting review</span></div></div>
+
+    <section className="panel" style={{borderTop:unreadNotifications?"5px solid #f6b519":undefined}}>
+     <div className="panel-head"><div><h2>Member queries & notifications</h2><p>{notifications.length} conversation(s) · {unreadNotifications} unread from members</p></div></div>
+     <div className="table-wrap"><table><thead><tr><th>Member</th><th>Type</th><th>Subject</th><th>Status</th><th>Action</th><th>Updated</th><th></th></tr></thead><tbody>
+      {notifications.slice(0,30).map(n=><tr key={n.id} style={{fontWeight:n.unread?700:400}}><td>{n.firstName} {n.lastName}<br/><small>{n.memberId}</small></td><td>{n.category.replaceAll("_"," ")}</td><td>{n.title}</td><td><Badge status={n.status==="resolved"?"active":"pending"}/></td><td>{n.actionRequired?"Required":"—"}</td><td>{new Date(n.updatedAt||n.createdAt).toLocaleString("en-BW")}</td><td><button className="text-button" onClick={()=>{const m=data.members.find(x=>x.id===n.memberId);if(m)setSelected(m)}}>Open →</button></td></tr>)}
+     </tbody></table>{!notifications.length&&<div className="empty">No member queries or notifications yet.</div>}</div>
+    </section>
 
     {pendingRecoveries.length>0&&<section className="panel" style={{borderTop:"5px solid #f6b519"}}><div className="panel-head"><div><h2>Password recovery queue</h2><p>{pendingRecoveries.length} pending request(s)</p></div></div><div className="table-wrap"><table><thead><tr><th>Member</th><th>Member ID</th><th>Email</th><th>Requested</th><th></th></tr></thead><tbody>{pendingRecoveries.map(r=><tr key={r.id}><td><b>{r.firstName} {r.lastName}</b></td><td className="mono">{r.memberId}</td><td>{r.email}</td><td>{new Date(r.requestedAt).toLocaleString("en-BW")}</td><td><button className="text-button" onClick={()=>{const m=data.members.find(x=>x.id===r.memberId);if(m)setSelected(m)}}>Review →</button></td></tr>)}</tbody></table></div></section>}
 
