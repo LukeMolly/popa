@@ -1,5 +1,6 @@
 import { DB } from "../../../lib/platform";
 import { writeAudit } from "../../../lib/audit";
+import { emailAdminsPasswordRecovery } from "../../../lib/account-emails";
 
 const generic=()=>Response.json({ok:true,message:"If the details match a membership, a recovery request has been sent to the membership office."});
 
@@ -19,6 +20,7 @@ export async function POST(request:Request){
   const id=crypto.randomUUID();
   await DB.prepare("INSERT INTO password_recovery_requests (id,member_id,email,status,requested_at,resolved_at,resolved_by) VALUES (?,?,?,'pending',?,'','')").bind(id,member.id,email,now.toISOString()).run();
   await writeAudit({email,name:member.firstName+" "+member.lastName,role:"member"},"password_recovery_requested","member",member.id,undefined,{requestId:id},"Member requested password recovery");
+  await emailAdminsPasswordRecovery(member);
   return generic();
  }catch(error){
   console.error("Password recovery request failed",error);
