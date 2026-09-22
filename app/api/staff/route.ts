@@ -2,6 +2,7 @@ import { DB } from "../../../lib/platform";
 import { getClubAdmin } from "../../admin-auth";
 import { calculateMembershipExpiry, expireDueMemberships, getMembershipSettings } from "../../../lib/membership";
 import { writeAudit } from "../../../lib/audit";
+import { emailMemberPaymentDecision } from "../../../lib/account-emails";
 const env = { DB };
 
 export const dynamic="force-dynamic";
@@ -33,7 +34,7 @@ export async function POST(request:Request){
    if(!["approved","rejected"].includes(status))return error("Choose approve or reject.");
    const payment=await db.prepare("SELECT member_id AS memberId,status,amount FROM payments WHERE id=?").bind(id).first() as {memberId:string;status:string;amount:number}|null;
    if(!payment||payment.status!=="submitted")return error("Payment is no longer awaiting review.",409);
-   const member=await db.prepare("SELECT status,expires_at AS expiresAt FROM members WHERE id=?").bind(payment.memberId).first() as {status:string;expiresAt:string}|null;
+   const member=await db.prepare("SELECT id,email,first_name AS firstName,last_name AS lastName,status,expires_at AS expiresAt FROM members WHERE id=?").bind(payment.memberId).first() as {id:string;email:string;firstName:string;lastName:string;status:string;expiresAt:string}|null;
    if(!member)return error("Member record not found.",404);
 
    const statements=[db.prepare("UPDATE payments SET status=?,note=?,reviewed_at=?,reviewed_by=? WHERE id=? AND status='submitted'").bind(status,note,now,admin.email,id)];
@@ -45,6 +46,7 @@ export async function POST(request:Request){
    await db.batch(statements);
    await writeAudit(admin,status==="approved"?"payment_approved":"payment_rejected","payment",id,{status:"submitted",amount:payment.amount},{status,note,reviewedBy:admin.email},note);
    if(status==="approved")await writeAudit(admin,"membership_activated","member",payment.memberId,member,{status:"active",expiresAt},"Activated after approved payment");
+   await emailMemberPaymentDecision(member,status as "approved"|"rejected",payment.amount,expiresAt,note);
    return Response.json({ok:true,expiresAt});
   }
 
