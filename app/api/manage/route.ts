@@ -5,6 +5,7 @@ import { newPasswordRecord } from "../../../lib/member-auth";
 import { writeAudit } from "../../../lib/audit";
 import { calculateMembershipExpiry, getMembershipSettings } from "../../../lib/membership";
 import { emailMemberStatusChange, emailMemberTemporaryCode } from "../../../lib/account-emails";
+import { notifyMembershipStatus } from "../../../lib/member-notifications";
 const env = { DB };
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,7 @@ export async function POST(request:Request){
    await db.prepare("UPDATE members SET status=?,expires_at=? WHERE id=?").bind(status,expiresAt,id).run();
    await writeAudit(admin,"membership_status_changed","member",id,member,{status,expiresAt},"Manual status change");
    if(member.email)await emailMemberStatusChange(member,status,expiresAt);
+   await notifyMembershipStatus(id,status,expiresAt);
    return Response.json({ok:true,expiresAt});
   }
 
