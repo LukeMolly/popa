@@ -3,10 +3,11 @@ import { newPasswordRecord } from "../../../lib/member-auth";
 import { calculateMembershipExpiry, getMembershipSettings } from "../../../lib/membership";
 import { writeAudit } from "../../../lib/audit";
 import { issueEmailVerification, notifyAdminsOfRegistration } from "../../../lib/email-verification";
+import { PAYMENT_METHOD_CODES } from "../../../lib/payment-methods";
 const env = { DB };
 
 export const dynamic = "force-dynamic";
-const fields = ["fullName","idNumber","dateOfBirth","placeOfBirth","membershipLocation","gender","email","phone","password"];
+const fields = ["fullName","idNumber","dateOfBirth","placeOfBirth","membershipLocation","gender","email","phone","password","paymentMethod"];
 const fail = (error:string,status=400) => Response.json({error},{status});
 const locations=["Gaborone","Molepolole","Mochudi","Francistown","Maun","Palapye","Lobatse","Other"];
 const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -32,6 +33,8 @@ export async function POST(request:Request){
   const phone=String(form.get("phone")).trim();
   const password=String(form.get("password"));
   const confirmPassword=String(form.get("confirmPassword")||"");
+  const paymentMethod=String(form.get("paymentMethod")||"").trim().toLowerCase();
+  const paymentMethodDetail=String(form.get("paymentMethodDetail")||"").trim().slice(0,120);
 
   if(fullName.length<3||fullName.length>160||!fullName.includes(" "))return fail("Enter your first name and surname.");
   if(!idPattern.test(idNumber))return fail("Enter a valid Omang or passport number.");
@@ -45,6 +48,8 @@ export async function POST(request:Request){
   if(Number.isNaN(birth.getTime())||birth>now||birth<oldest)return fail("Date of birth must be a valid past date.");
   if(!passwordPattern.test(password))return fail("Password must be exactly 4 letters and/or numbers.");
   if(password!==confirmPassword)return fail("Passwords do not match.");
+  if(!PAYMENT_METHOD_CODES.includes(paymentMethod as any))return fail("Choose FNB, Stanbic Bank or another payment method.");
+  if(paymentMethod==="other"&&!paymentMethodDetail)return fail("Describe the other payment method used.");
 
   const duplicate=await env.DB.prepare("SELECT id,email,id_number AS idNumber FROM members WHERE lower(email)=lower(?) OR upper(id_number)=upper(?) LIMIT 1").bind(email,idNumber).first() as {id:string;email:string;idNumber:string}|null;
   if(duplicate){
@@ -67,11 +72,11 @@ export async function POST(request:Request){
   await env.DB.batch([
    env.DB.prepare("INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender,password_salt,password_hash,password_must_change) VALUES (?,?,?,?,?,'pending',?,?,?,?,?,?,?,?,?,?,FALSE)")
     .bind(id,firstName,lastName,phone,email,expiresAt,token,createdAt.toISOString(),idNumber,dob,placeOfBirth,membershipLocation,gender,passwordRecord.salt,passwordRecord.hash),
-   env.DB.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at,reviewed_by) VALUES (?,?,?,?,?,?,?,'submitted','Registration payment',?,'','')")
-    .bind(paymentId,id,settings.membershipFee,receiptUrl,proof.name.slice(0,200),proof.type,String(form.get("reference")||"").trim().slice(0,100),createdAt.toISOString())
+   env.DB.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at,reviewed_by,payment_method,payment_method_detail) VALUES (?,?,?,?,?,?,?,'submitted','Registration payment',?,'','',?,?)")
+    .bind(paymentId,id,settings.membershipFee,receiptUrl,proof.name.slice(0,200),proof.type,String(form.get("reference")||"").trim().slice(0,100),createdAt.toISOString(),paymentMethod,paymentMethodDetail)
   ]);
 
-  await writeAudit({email,name:fullName,role:"member"},"member_registered","member",id,undefined,{status:"pending",membershipLocation,gender,expiresAt},"Public registration");
+  await writeAudit({email,name:fullName,role:"member"},"member_registered","member",id,undefined,{status:"pending",membershipLocation,gender,expiresAt,paymentMethod,paymentMethodDetail},"Public registration");
   const memberForEmail={id,email,firstName,lastName,membershipLocation};
   const [verificationResult]=await Promise.all([
    issueEmailVerification(memberForEmail),
