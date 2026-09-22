@@ -82,7 +82,7 @@ export default function Portal({accountEmail,settings}:{accountEmail:string;sett
       </div>
       {error&&<p className="error" role="alert">{error}</p>}
       <label className="consent"><input required type="checkbox"/> I confirm that these details are accurate and consent to their use for membership verification and communication.</label>
-      <Button type="submit" size="lg" className="submit-button" disabled={busy||!settings.registrationOpen}>{busy?"Submitting…":"Submit registration"}<ChevronRight/></Button>
+      <Button type="submit" size="lg" className="submit-button" disabled={busy||!settings.registrationOpen||!paymentMethod||(paymentMethod==="other"&&!paymentMethodDetail.trim())}>{busy?"Submitting…":"Submit registration"}<ChevronRight/></Button>
      </form>
     </section>
     <aside className="side-stack"><div className="dark-card"><span className="eyebrow gold">WHAT HAPPENS NEXT</span>{[["01","Submit KYC details"],["02","Verify your email"],["03","Payment is verified"],["04","Membership is activated"]].map(([n,t])=><div className="step" key={n}><b>{n}</b><span>{t}</span></div>)}</div><div className="expiry-card"><CalendarDays/><div><small>SEASON EXPIRY</small><strong>{niceDate(settings.seasonEndDate)}</strong><span>{settings.seasonName}</span></div></div></aside>
