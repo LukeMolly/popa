@@ -54,7 +54,7 @@ export async function POST(request:Request,{params}:Context){
   const type=file.type.toLowerCase();
   if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(type))return Response.json({error:"Upload a JPG, PNG, WebP or PDF."},{status:400});
 
-  const id=crypto.randomUUID(),key="receipts/"+id,receiptUrl=await uploadReceipt(key,await file.arrayBuffer(),type),now=new Date().toISOString();
+  const id=crypto.randomUUID(),key="receipts/"+paymentMethod+"/"+id,receiptUrl=await uploadReceipt(key,await file.arrayBuffer(),type),now=new Date().toISOString();
   try{
    await env.DB.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at,reviewed_by,payment_method,payment_method_detail) VALUES (?,?,?,?,?,?,?,'submitted','Renewal payment',?,'','',?,?)")
     .bind(id,member.id,settings.membershipFee,receiptUrl,file.name.slice(0,200),type,reference,now,paymentMethod,paymentMethodDetail).run();
