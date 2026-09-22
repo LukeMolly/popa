@@ -22,7 +22,7 @@ export async function POST(request:Request){
   await env.DB.batch([env.DB.prepare("DELETE FROM admin_login_attempts WHERE email=?").bind(email),env.DB.prepare("DELETE FROM admin_sessions WHERE email=? OR expires_at<=?").bind(email,now.toISOString()),env.DB.prepare("INSERT INTO admin_sessions (token_hash,email,expires_at,created_at) VALUES (?,?,?,?)").bind(tokenHash,email,expiresAt.toISOString(),now.toISOString())]);
   (await cookies()).set(ADMIN_SESSION_COOKIE,token,{httpOnly:true,secure:true,sameSite:"lax",path:"/",expires:expiresAt});
   return Response.json({ok:true});
- }catch(error){console.error(error);return fail("PIN sign-in is temporarily unavailable.",500)}
+ }catch(error){console.error(error);const message=error instanceof Error?error.message:"";if(message.includes("DATABASE_URL is not configured"))return fail("Membership database is not connected to this deployment. Ask the system administrator to enable the Preview database environment.",503);return fail("PIN sign-in is temporarily unavailable.",500)}
 }
 export async function DELETE(){
  try{
