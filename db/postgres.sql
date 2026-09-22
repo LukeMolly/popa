@@ -32,6 +32,7 @@ ALTER TABLE member_notifications ADD COLUMN IF NOT EXISTS action_required INTEGE
 ALTER TABLE member_notifications ADD COLUMN IF NOT EXISTS member_read_at TEXT NOT NULL DEFAULT '';
 ALTER TABLE member_notifications ADD COLUMN IF NOT EXISTS admin_read_at TEXT NOT NULL DEFAULT '';
 ALTER TABLE member_notifications ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT '';
+ALTER TABLE member_notifications ADD COLUMN IF NOT EXISTS last_sender_role TEXT NOT NULL DEFAULT 'system';
 CREATE INDEX IF NOT EXISTS idx_member_notifications_member ON member_notifications (member_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_member_notifications_status ON member_notifications (status, created_at);
 
