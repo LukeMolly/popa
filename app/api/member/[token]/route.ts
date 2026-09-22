@@ -3,6 +3,7 @@ import { getChatGPTUser } from "../../../chatgpt-auth";
 import { isClubAdmin } from "../../../admin-auth";
 import { expireDueMemberships, getMembershipSettings } from "../../../../lib/membership";
 import { writeAudit } from "../../../../lib/audit";
+import { emailAdminsPaymentSubmitted } from "../../../../lib/account-emails";
 const env = { DB };
 
 export const dynamic="force-dynamic";
@@ -56,6 +57,7 @@ export async function POST(request:Request,{params}:Context){
     .bind(id,member.id,settings.membershipFee,receiptUrl,file.name.slice(0,200),type,reference,now).run();
   }catch(e){await deleteReceipt(receiptUrl);throw e}
   await writeAudit({email:authorised.email,name:authorised.firstName+" "+authorised.lastName,role:"member"},"renewal_payment_submitted","payment",id,undefined,{memberId:member.id,amount:settings.membershipFee,status:"submitted"},"Member renewal submission");
+  await emailAdminsPaymentSubmitted({id:authorised.id,email:authorised.email,firstName:authorised.firstName,lastName:authorised.lastName},settings.membershipFee,id);
   return Response.json({id,status:"submitted",amount:settings.membershipFee},{status:201});
  }catch(e){console.error(e);return Response.json({error:"Could not submit proof. Please try again."},{status:500})}
 }
