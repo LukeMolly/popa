@@ -4,6 +4,7 @@ import { getClubAdmin } from "../../admin-auth";
 import { newPasswordRecord } from "../../../lib/member-auth";
 import { writeAudit } from "../../../lib/audit";
 import { calculateMembershipExpiry, getMembershipSettings } from "../../../lib/membership";
+import { emailMemberStatusChange, emailMemberTemporaryCode } from "../../../lib/account-emails";
 const env = { DB };
 
 export const dynamic = "force-dynamic";
@@ -37,12 +38,13 @@ export async function POST(request:Request){
   if(data.action==="status"){
    const id=clean(data.id,30),status=clean(data.status,20);
    if(!["active","pending","expired","suspended"].includes(status))return fail("Invalid status.");
-   const member=await db.prepare("SELECT status,expires_at AS expiresAt FROM members WHERE id=?").bind(id).first() as {status:string;expiresAt:string}|null;
+   const member=await db.prepare("SELECT id,email,first_name AS firstName,last_name AS lastName,status,expires_at AS expiresAt FROM members WHERE id=?").bind(id).first() as {id:string;email:string;firstName:string;lastName:string;status:string;expiresAt:string}|null;
    if(!member)return fail("Member not found.",404);
    let expiresAt=member.expiresAt;
    if(status==="active"&&(!expiresAt||expiresAt<new Date().toISOString().slice(0,10)))expiresAt=calculateMembershipExpiry(await getMembershipSettings(),new Date());
    await db.prepare("UPDATE members SET status=?,expires_at=? WHERE id=?").bind(status,expiresAt,id).run();
    await writeAudit(admin,"membership_status_changed","member",id,member,{status,expiresAt},"Manual status change");
+   if(member.email)await emailMemberStatusChange(member,status,expiresAt);
    return Response.json({ok:true,expiresAt});
   }
 
@@ -67,6 +69,7 @@ export async function POST(request:Request){
     db.prepare("UPDATE password_recovery_requests SET status='resolved',resolved_at=?,resolved_by=? WHERE member_id=? AND status='pending'").bind(now,admin.email,id)
    ]);
    await writeAudit(admin,"password_reset_issued","member",id,undefined,{temporaryCodeIssued:true},"Temporary code issued; code value is not stored in audit log");
+   await emailMemberTemporaryCode(member,code);
    return Response.json({ok:true,temporaryCode:code});
   }
 
