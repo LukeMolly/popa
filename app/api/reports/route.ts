@@ -49,10 +49,10 @@ export async function GET(request:Request){
   }
 
   if(type==="payments"){
-   const result=await DB.prepare("SELECT p.id,m.id AS memberId,m.first_name AS firstName,m.last_name AS lastName,m.membership_location AS membershipLocation,p.amount,p.reference,p.status,p.note,p.created_at AS createdAt,p.reviewed_at AS reviewedAt,p.reviewed_by AS reviewedBy FROM payments p JOIN members m ON m.id=p.member_id ORDER BY p.created_at DESC").all() as {results:any[]};
+   const result=await DB.prepare("SELECT p.id,m.id AS memberId,m.first_name AS firstName,m.last_name AS lastName,m.membership_location AS membershipLocation,p.amount,p.reference,p.payment_method AS paymentMethod,p.payment_method_detail AS paymentMethodDetail,p.status,p.note,p.created_at AS createdAt,p.reviewed_at AS reviewedAt,p.reviewed_by AS reviewedBy FROM payments p JOIN members m ON m.id=p.member_id ORDER BY p.created_at DESC").all() as {results:any[]};
    return file("township-rollers-payments-report.csv",[
-    ["Payment ID","Member ID","Member","Region","Amount","Reference","Status","Note","Submitted","Reviewed","Reviewed By"],
-    ...result.results.map(p=>[p.id,p.memberId,p.firstName+" "+p.lastName,p.membershipLocation,p.amount,p.reference,p.status,p.note,p.createdAt,p.reviewedAt,p.reviewedBy])
+    ["Payment ID","Member ID","Member","Region","Amount","Payment Method","Payment Method Detail","Reference","Status","Note","Submitted","Reviewed","Reviewed By"],
+    ...result.results.map(p=>[p.id,p.memberId,p.firstName+" "+p.lastName,p.membershipLocation,p.amount,p.paymentMethod,p.paymentMethodDetail,p.reference,p.status,p.note,p.createdAt,p.reviewedAt,p.reviewedBy])
    ]);
   }
 
@@ -67,7 +67,7 @@ export async function GET(request:Request){
   if(type==="summary"){
    const [members,payments,settings]=await Promise.all([
     DB.prepare("SELECT id,status,date_of_birth AS dateOfBirth,membership_location AS membershipLocation,gender,created_at AS createdAt FROM members").all() as Promise<{results:any[]}>,
-    DB.prepare("SELECT amount,status,created_at AS createdAt FROM payments").all() as Promise<{results:any[]}>,
+    DB.prepare("SELECT amount,status,payment_method AS paymentMethod,created_at AS createdAt FROM payments").all() as Promise<{results:any[]}>,
     getMembershipSettings()
    ]);
    const rows:unknown[][]=[["Section","Metric","Value"]];
@@ -76,6 +76,7 @@ export async function GET(request:Request){
    for(const s of statusNames)rows.push(["Status",s,members.results.filter(m=>m.status===s).length]);
    rows.push(["Payments","Approved revenue",payments.results.filter(p=>p.status==="approved").reduce((sum,p)=>sum+Number(p.amount||0),0)]);
    for(const s of ["submitted","approved","rejected"])rows.push(["Payments",s,payments.results.filter(p=>p.status===s).length]);
+   for(const method of ["fnb","stanbic","other"])rows.push(["Payment Method",method,payments.results.filter(p=>(p.paymentMethod||"other")===method).length]);
 
    const regions=new Map<string,number>(),genders=new Map<string,number>(),ages=new Map<string,number>();
    for(const m of members.results){
