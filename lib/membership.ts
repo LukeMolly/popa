@@ -1,5 +1,6 @@
 import { DB } from "./platform";
 import { writeAudit } from "./audit";
+import { emailMemberExpired } from "./account-emails";
 
 export type MembershipSettings={
  membershipValidityDays:number;
@@ -33,10 +34,11 @@ export function calculateMembershipExpiry(settings:MembershipSettings,from=new D
 
 export async function expireDueMemberships(){
  const today=new Date().toISOString().slice(0,10);
- const due=await DB.prepare("SELECT id,status,expires_at AS expiresAt FROM members WHERE status='active' AND expires_at<>'' AND expires_at<?").bind(today).all() as {results:Array<{id:string;status:string;expiresAt:string}>};
+ const due=await DB.prepare("SELECT id,email,first_name AS firstName,last_name AS lastName,status,expires_at AS expiresAt FROM members WHERE status='active' AND expires_at<>'' AND expires_at<?").bind(today).all() as {results:Array<{id:string;email:string;firstName:string;lastName:string;status:string;expiresAt:string}>};
  for(const member of due.results){
   await DB.prepare("UPDATE members SET status='expired' WHERE id=? AND status='active'").bind(member.id).run();
   await writeAudit({email:"system",name:"System",role:"automation"},"membership_expired","member",member.id,{status:"active",expiresAt:member.expiresAt},{status:"expired",expiresAt:member.expiresAt},"Automatic expiry");
+  if(member.email)await emailMemberExpired(member,member.expiresAt);
  }
  return due.results.length;
 }
