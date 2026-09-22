@@ -1,9 +1,10 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import Link from "next/link";
+import { paymentMethodLabel } from "../../lib/payment-methods";
 
 type Payment={
- id:string;memberId:string;firstName:string;lastName:string;amount:number;reference:string;receiptName:string;status:string;note:string;createdAt:string;reviewedAt:string;reviewedBy:string;
+ id:string;memberId:string;firstName:string;lastName:string;amount:number;reference:string;receiptName:string;paymentMethod:string;paymentMethodDetail:string;status:string;note:string;createdAt:string;reviewedAt:string;reviewedBy:string;
 };
 type Settings={membershipValidityDays:number;expiryReminderDays:number;seasonName:string;seasonStartDate:string;seasonEndDate:string;membershipFee:number;registrationOpen:boolean};
 type OfficeData={payments:Payment[];settings:Settings};
@@ -11,7 +12,7 @@ type AdminRole="executive"|"membership";
 const defaults:Settings={membershipValidityDays:334,expiryReminderDays:7,seasonName:"2026 / 2027",seasonStartDate:"2026-09-01",seasonEndDate:"2027-07-31",membershipFee:200,registrationOpen:true};
 
 export default function Office({role,name}:{role:AdminRole;name:string}){
- const [data,setData]=useState<OfficeData>({payments:[],settings:defaults}),[error,setError]=useState(""),[notice,setNotice]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
+ const [data,setData]=useState<OfficeData>({payments:[],settings:defaults}),[paymentFilter,setPaymentFilter]=useState("all"),[error,setError]=useState(""),[notice,setNotice]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
 
  const load=useCallback(async()=>{try{const r=await fetch("/api/staff",{cache:"no-store"});const d=await r.json() as OfficeData&{error?:string};if(!r.ok)throw Error(d.error||"Could not load membership office");setData(d);setError("")}catch(e){setError(e instanceof Error?e.message:"Could not load membership office")}finally{setLoading(false)}},[]);
  useEffect(()=>{void load()},[load]);
@@ -25,6 +26,9 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
    setNotice("Saved successfully.");await load();return true;
   }catch(e){setError(e instanceof Error?e.message:"Could not save");return false}finally{setBusy(false)}
  }
+
+ const visiblePayments=paymentFilter==="all"?data.payments:data.payments.filter(p=>(p.paymentMethod||"other")===paymentFilter);
+ const paymentCounts={all:data.payments.length,fnb:data.payments.filter(p=>p.paymentMethod==="fnb").length,stanbic:data.payments.filter(p=>p.paymentMethod==="stanbic").length,other:data.payments.filter(p=>!p.paymentMethod||p.paymentMethod==="other").length};
 
  return <main className="office-page">
   <div className="office-top">
@@ -41,10 +45,14 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
 
   <section className="member-panel">
    <h2>Proof of payment · P{data.settings.membershipFee} per member</h2>
-   <div className="table-wrap"><table><thead><tr><th>Member</th><th>Submitted</th><th>Reference</th><th>Proof</th><th>Status</th><th>Decision</th></tr></thead><tbody>
-    {data.payments.map(p=><tr key={p.id}>
+   <div style={{display:"flex",gap:8,flexWrap:"wrap",margin:"12px 0 18px"}}>
+    {[["all","All",paymentCounts.all],["fnb","FNB",paymentCounts.fnb],["stanbic","Stanbic",paymentCounts.stanbic],["other","Other",paymentCounts.other]].map(([value,label,count])=><button key={String(value)} type="button" className={paymentFilter===value?"primary":"secondary"} onClick={()=>setPaymentFilter(String(value))}>{label} ({count})</button>)}
+   </div>
+   <div className="table-wrap"><table><thead><tr><th>Member</th><th>Submitted</th><th>Payment method</th><th>Reference</th><th>Proof</th><th>Status</th><th>Decision</th></tr></thead><tbody>
+    {visiblePayments.map(p=><tr key={p.id}>
      <td><b>{p.firstName} {p.lastName}</b><br/><small>{p.memberId}</small></td>
      <td>{new Date(p.createdAt).toLocaleString("en-BW")}</td>
+     <td><b>{paymentMethodLabel(p.paymentMethod,p.paymentMethodDetail)}</b></td>
      <td>{p.reference||"—"}</td>
      <td><a href={"/api/staff/receipt/"+encodeURIComponent(p.id)} target="_blank" rel="noopener noreferrer">View {p.receiptName}</a></td>
      <td><span className={"badge "+p.status}>{p.status}</span>{p.note&&<small className="office-note">{p.note}</small>}</td>
@@ -53,7 +61,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
       <button disabled={busy} className="secondary" onClick={()=>{const note=window.prompt("Reason for rejection (optional)");if(note!==null)void save({action:"review",id:p.id,status:"rejected",note})}}>Reject</button>
      </div>:<span className="muted">{p.reviewedAt?"Reviewed "+new Date(p.reviewedAt).toLocaleDateString("en-BW")+(p.reviewedBy?" by "+p.reviewedBy:""):"Completed"}</span>}</td>
     </tr>)}
-   </tbody></table>{!data.payments.length&&<p className="muted">No payment submissions yet.</p>}</div>
+   </tbody></table>{!visiblePayments.length&&<p className="muted">No payment submissions in this payment category.</p>}</div>
   </section>
 
   <section className="member-panel">
