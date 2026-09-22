@@ -2,6 +2,7 @@ import { DB, deleteReceipt, uploadReceipt } from "../../../lib/platform";
 import { newPasswordRecord } from "../../../lib/member-auth";
 import { calculateMembershipExpiry, getMembershipSettings } from "../../../lib/membership";
 import { writeAudit } from "../../../lib/audit";
+import { issueEmailVerification, notifyAdminsOfRegistration } from "../../../lib/email-verification";
 const env = { DB };
 
 export const dynamic = "force-dynamic";
@@ -71,7 +72,20 @@ export async function POST(request:Request){
   ]);
 
   await writeAudit({email,name:fullName,role:"member"},"member_registered","member",id,undefined,{status:"pending",membershipLocation,gender,expiresAt},"Public registration");
-  return Response.json({membershipId:id,expiresAt:new Date(expiresAt+"T23:59:59Z").toISOString(),membershipFee:settings.membershipFee,seasonName:settings.seasonName});
+  const memberForEmail={id,email,firstName,lastName,membershipLocation};
+  const [verificationResult]=await Promise.all([
+   issueEmailVerification(memberForEmail),
+   notifyAdminsOfRegistration(memberForEmail,settings.membershipFee)
+  ]);
+  await writeAudit({email,name:fullName,role:"member"},"email_verification_issued","member",id,undefined,{email,deliveryOk:Boolean(verificationResult.ok)},"Registration verification email issued");
+  return Response.json({
+   membershipId:id,
+   expiresAt:new Date(expiresAt+"T23:59:59Z").toISOString(),
+   membershipFee:settings.membershipFee,
+   seasonName:settings.seasonName,
+   emailVerificationRequired:true,
+   verificationEmailSent:Boolean(verificationResult.ok)
+  });
  }catch(error){
   if(receiptUrl){try{await deleteReceipt(receiptUrl)}catch{}}
   console.error("Public registration failed",error);
