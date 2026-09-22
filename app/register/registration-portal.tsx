@@ -18,7 +18,7 @@ function niceDate(value:string){return new Intl.DateTimeFormat("en-BW",{day:"2-d
 
 export default function Portal({accountEmail,settings}:{accountEmail:string;settings:MembershipSettings}){
  const dobRef=useRef<HTMLInputElement>(null);
- const [active,setActive]=useState("register"),[gender,setGender]=useState(""),[location,setLocation]=useState(""),[fileName,setFileName]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState<{membershipId:string;expiresAt:string}|null>(null),[error,setError]=useState("");
+ const [active,setActive]=useState("register"),[gender,setGender]=useState(""),[location,setLocation]=useState(""),[fileName,setFileName]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState<{membershipId:string;expiresAt:string;verificationEmailSent:boolean}|null>(null),[error,setError]=useState("");
  const latestBirthDate=useMemo(()=>new Date().toISOString().slice(0,10),[]);
 
  function openDatePicker(){const input=dobRef.current;if(!input)return;input.focus();try{input.showPicker?.()}catch{}}
@@ -27,9 +27,9 @@ export default function Portal({accountEmail,settings}:{accountEmail:string;sett
   const form=new FormData(e.currentTarget);form.set("gender",gender);form.set("membershipLocation",location);
   try{
    const response=await fetch("/api/register",{method:"POST",body:form});
-   const data=await response.json() as {membershipId?:string;expiresAt?:string;error?:string};
+   const data=await response.json() as {membershipId?:string;expiresAt?:string;error?:string;verificationEmailSent?:boolean};
    if(!response.ok||!data.membershipId||!data.expiresAt)throw new Error(data.error||"Registration could not be completed.");
-   setResult({membershipId:data.membershipId,expiresAt:data.expiresAt});setActive("membership");
+   setResult({membershipId:data.membershipId,expiresAt:data.expiresAt,verificationEmailSent:Boolean(data.verificationEmailSent)});setActive("membership");
   }catch(err){setError(err instanceof Error?err.message:"Registration could not be completed.")}finally{setBusy(false)}
  }
 
@@ -63,12 +63,12 @@ export default function Portal({accountEmail,settings}:{accountEmail:string;sett
       <Button type="submit" size="lg" className="submit-button" disabled={busy||!settings.registrationOpen}>{busy?"Submitting…":"Submit registration"}<ChevronRight/></Button>
      </form>
     </section>
-    <aside className="side-stack"><div className="dark-card"><span className="eyebrow gold">WHAT HAPPENS NEXT</span>{[["01","Submit KYC details"],["02","Payment is verified"],["03","Membership is activated"]].map(([n,t])=><div className="step" key={n}><b>{n}</b><span>{t}</span></div>)}</div><div className="expiry-card"><CalendarDays/><div><small>SEASON EXPIRY</small><strong>{niceDate(settings.seasonEndDate)}</strong><span>{settings.seasonName}</span></div></div></aside>
+    <aside className="side-stack"><div className="dark-card"><span className="eyebrow gold">WHAT HAPPENS NEXT</span>{[["01","Submit KYC details"],["02","Verify your email"],["03","Payment is verified"],["04","Membership is activated"]].map(([n,t])=><div className="step" key={n}><b>{n}</b><span>{t}</span></div>)}</div><div className="expiry-card"><CalendarDays/><div><small>SEASON EXPIRY</small><strong>{niceDate(settings.seasonEndDate)}</strong><span>{settings.seasonName}</span></div></div></aside>
    </TabsContent>
 
    <TabsContent value="membership" className="member-view">
     <section className="digital-card"><div className="card-top"><span className="crest small">TR</span><span>{settings.seasonName}</span></div><p>TOWNSHIP ROLLERS F.C.</p><h2>{result?"Membership submitted":"Your digital membership"}</h2><div className="card-details"><div><small>MEMBERSHIP ID</small><strong>{result?.membershipId||"Register to receive your ID"}</strong></div><div><small>STATUS</small><strong className="status"><i/>{result?"Pending verification":"Not registered"}</strong></div></div></section>
-    <section className="panel status-panel"><span className="eyebrow">MEMBERSHIP STATUS</span><h2>{result?"We are verifying your payment":"Start your membership"}</h2><p>{result?"Your application has been saved. The membership office will confirm your payment and activate your membership.":"Complete the registration form and upload proof of payment."}</p><div className="status-row"><FileCheck2/><span><small>Payment proof</small><strong>{result?"Received":"Not submitted"}</strong></span></div><div className="status-row"><CalendarDays/><span><small>Season expiry</small><strong>{result?new Date(result.expiresAt).toLocaleDateString("en-BW",{day:"2-digit",month:"long",year:"numeric"}):niceDate(settings.seasonEndDate)}</strong></span></div>{!result&&<Button onClick={()=>setActive("register")}>Register now</Button>}</section>
+    <section className="panel status-panel"><span className="eyebrow">MEMBERSHIP STATUS</span><h2>{result?"Verify your email address":"Start your membership"}</h2><p>{result?(result.verificationEmailSent?"Your application has been saved. Check your inbox and verify your email before signing in. The membership office will then confirm your payment.":"Your application has been saved, but the verification email could not be sent yet. Use the member login screen to resend it."):"Complete the registration form and upload proof of payment."}</p><div className="status-row"><ShieldCheck/><span><small>Email verification</small><strong>{result?(result.verificationEmailSent?"Sent — check inbox":"Resend required"):"Not started"}</strong></span></div><div className="status-row"><FileCheck2/><span><small>Payment proof</small><strong>{result?"Received":"Not submitted"}</strong></span></div><div className="status-row"><CalendarDays/><span><small>Season expiry</small><strong>{result?new Date(result.expiresAt).toLocaleDateString("en-BW",{day:"2-digit",month:"long",year:"numeric"}):niceDate(settings.seasonEndDate)}</strong></span></div>{!result&&<Button onClick={()=>setActive("register")}>Register now</Button>}</section>
    </TabsContent>
   </Tabs>
   <footer><span>Township Rollers F.C. Membership</span><span><MapPin size={14}/> Botswana</span></footer>
