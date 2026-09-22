@@ -11,9 +11,7 @@ type SendEmailInput={
 function recipients(value:string|string[]){
  return (Array.isArray(value)?value:[value]).map(v=>v.trim().toLowerCase()).filter(Boolean);
 }
-function fromAddress(){
- return process.env.EMAIL_FROM?.trim()||"Township Rollers Membership <membership@townshiprollersfc.com>";
-}
+function fromAddress(){ return process.env.EMAIL_FROM?.trim()||""; }
 function resendKey(){return process.env.RESEND_API_KEY?.trim()||"";}
 
 export function appBaseUrl(){
@@ -33,17 +31,18 @@ async function logEmail(to:string,template:string,subject:string,status:string,p
 export async function sendEmail(input:SendEmailInput){
  const to=recipients(input.to);
  if(!to.length)return {ok:false,skipped:true,error:"No recipients"};
- const apiKey=resendKey();
- if(!apiKey){
-  for(const address of to)await logEmail(address,input.template,input.subject,"skipped","","RESEND_API_KEY is not configured");
-  console.warn("Email skipped because RESEND_API_KEY is not configured",input.template,to);
-  return {ok:false,skipped:true,error:"RESEND_API_KEY is not configured"};
+ const apiKey=resendKey(),from=fromAddress();
+ if(!apiKey||!from){
+  const reason=!apiKey?"RESEND_API_KEY is not configured":"EMAIL_FROM is not configured";
+  for(const address of to)await logEmail(address,input.template,input.subject,"skipped","",reason);
+  console.warn("Email skipped because mail configuration is incomplete",input.template,to,reason);
+  return {ok:false,skipped:true,error:reason};
  }
  try{
   const response=await fetch("https://api.resend.com/emails",{
    method:"POST",
    headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json"},
-   body:JSON.stringify({from:fromAddress(),to,subject:input.subject,html:input.html,text:input.text})
+   body:JSON.stringify({from,to,subject:input.subject,html:input.html,text:input.text})
   });
   const data=await response.json().catch(()=>({})) as {id?:string;message?:string;error?:{message?:string}};
   if(!response.ok){
