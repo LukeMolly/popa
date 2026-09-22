@@ -1,18 +1,21 @@
 import { readFile } from "node:fs/promises";
-import { randomBytes, scrypt as scryptCallback } from "node:crypto";
-import { promisify } from "node:util";
 import { neon } from "@neondatabase/serverless";
+
 const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 if (!url) throw new Error("Set DATABASE_URL before running the migration.");
+
 const sql = neon(url);
 const source = await readFile(new URL("../db/postgres.sql", import.meta.url), "utf8");
+
 for (const statement of source.split(/;\s*(?:\n|$)/).map((value) => value.trim()).filter(Boolean)) {
   await sql.query(statement, []);
 }
+
 const administrators = [
   ["botlhelucas@gmail.com", "Botlhe Lucas", "executive", "17d811cb-5139-47ab-b8c3-858118213bd5", "a891397e43eb21cae2fffe8f60db0c62cac0b77c1590483d8d6484361d7c9b8f"],
   ["lucasmoleele@gmail.com", "Lucas Moleele", "membership", "3dfb761b-a895-41f2-ad90-6f534e49d596", "cfbb8a078104facf839e3c05065613791ad044f8f72efa1a3d5cc4fb9a22fa8f"],
 ];
+
 for (const [email, name, role, pinSalt, pinHash] of administrators) {
   const now = new Date().toISOString();
   await sql.query(
@@ -20,11 +23,5 @@ for (const [email, name, role, pinSalt, pinHash] of administrators) {
     [email, name, role, pinSalt, pinHash, now],
   );
 }
-const scrypt = promisify(scryptCallback);
-const legacyMembers = await sql.query("SELECT id FROM members WHERE password_hash = '' OR password_salt = ''", []);
-for (const member of legacyMembers) {
-  const salt = randomBytes(24).toString("hex");
-  const hash = (await scrypt("password", salt, 64)).toString("hex");
-  await sql.query("UPDATE members SET password_salt = $1, password_hash = $2, password_must_change = TRUE WHERE id = $3 AND (password_hash = '' OR password_salt = '')", [salt, hash, member.id]);
-}
+
 console.log("PostgreSQL schema is ready.");
