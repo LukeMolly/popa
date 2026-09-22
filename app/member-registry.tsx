@@ -40,7 +40,7 @@ export default function MemberRegistry(){
    setData({...empty,...v,settings:v.settings||defaultSettings});setError("");
   }catch(e){setError(e instanceof Error?e.message:"Could not load records")}finally{setLoading(false)}
  },[]);
- useEffect(()=>{void load();void loadNotifications()},[load,loadNotifications]);
+ useEffect(()=>{void load();void loadNotifications();const timer=window.setInterval(()=>void loadNotifications(),30000);return()=>window.clearInterval(timer)},[load,loadNotifications]);
  useEffect(()=>{if(!selected)return;QRCode.toDataURL(location.origin+"/verify/"+selected.token,{width:256,margin:2,color:{dark:"#102b5a",light:"#ffffff"}}).then(setQr).catch(()=>setQr(""))},[selected]);
 
  async function send(payload:Record<string,unknown>,success:string){
