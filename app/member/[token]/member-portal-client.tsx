@@ -7,10 +7,12 @@ import { PAYMENT_METHODS, paymentMethodLabel } from "../../../lib/payment-method
 type Member={id:string;firstName:string;lastName:string;status:string;expiresAt:string;token:string;reminderDays?:number};
 type Payment={id:string;amount:number;reference:string;status:string;note:string;paymentMethod?:string;paymentMethodDetail?:string;createdAt:string}|null;
 type Settings={seasonName:string;membershipFee:number;expiryReminderDays:number};
+type NotificationMessage={id:string;notificationId:number;senderRole:string;senderEmail:string;senderName:string;body:string;createdAt:string};
+type MemberNotification={id:number;title:string;body:string;category:string;createdByRole:string;status:string;actionRequired:boolean;unread:boolean;createdAt:string;updatedAt:string;lastSenderRole:string;messages:NotificationMessage[]};
 const when=(date:string)=>new Date(date).toLocaleString("en-BW",{dateStyle:"medium",timeStyle:"short"});
 
 export default function MemberPortal({params}:{params:Promise<{token:string}>}){
- const [token,setToken]=useState(""),[member,setMember]=useState<Member|null>(null),[payment,setPayment]=useState<Payment>(null),[settings,setSettings]=useState<Settings>({seasonName:"Membership",membershipFee:200,expiryReminderDays:7}),[paymentMethod,setPaymentMethod]=useState(""),[paymentMethodDetail,setPaymentMethodDetail]=useState(""),[qr,setQr]=useState(""),[error,setError]=useState(""),[success,setSuccess]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
+ const [token,setToken]=useState(""),[member,setMember]=useState<Member|null>(null),[payment,setPayment]=useState<Payment>(null),[settings,setSettings]=useState<Settings>({seasonName:"Membership",membershipFee:200,expiryReminderDays:7}),[notifications,setNotifications]=useState<MemberNotification[]>([]),[paymentMethod,setPaymentMethod]=useState(""),[paymentMethodDetail,setPaymentMethodDetail]=useState(""),[qr,setQr]=useState(""),[error,setError]=useState(""),[success,setSuccess]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[notificationsLoading,setNotificationsLoading]=useState(false);
  useEffect(()=>{params.then(({token})=>setToken(token))},[params]);
  useEffect(()=>{
   if(!token)return;
@@ -23,6 +25,50 @@ export default function MemberPortal({params}:{params:Promise<{token:string}>}){
    })
    .then(setQr).catch(e=>setError(e instanceof Error?e.message:"Membership unavailable.")).finally(()=>setLoading(false));
  },[token]);
+
+ async function refreshNotifications(){
+  if(!token)return;
+  setNotificationsLoading(true);
+  try{
+   const response=await fetch("/api/member/"+encodeURIComponent(token)+"/notifications",{cache:"no-store"});
+   const data=await response.json() as {notifications?:MemberNotification[];error?:string};
+   if(!response.ok)throw Error(data.error||"Could not load notifications");
+   setNotifications(data.notifications||[]);
+  }catch(e){setError(e instanceof Error?e.message:"Could not load notifications")}finally{setNotificationsLoading(false)}
+ }
+ useEffect(()=>{if(token)void refreshNotifications()},[token]);
+
+ async function submitQuery(e:React.FormEvent<HTMLFormElement>){
+  e.preventDefault();if(!token)return;setBusy(true);setError("");setSuccess("");
+  const form=e.currentTarget,data=new FormData(form);
+  try{
+   const response=await fetch("/api/member/"+encodeURIComponent(token)+"/notifications",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"query",title:data.get("title"),body:data.get("body")})});
+   const result=await response.json() as {error?:string};
+   if(!response.ok)throw Error(result.error||"Could not send query");
+   form.reset();setSuccess("Your query has been sent to the membership office.");await refreshNotifications();
+  }catch(e){setError(e instanceof Error?e.message:"Could not send query")}finally{setBusy(false)}
+ }
+
+ async function replyNotification(notificationId:number,e:React.FormEvent<HTMLFormElement>){
+  e.preventDefault();if(!token)return;setBusy(true);setError("");setSuccess("");
+  const form=e.currentTarget,data=new FormData(form);
+  try{
+   const response=await fetch("/api/member/"+encodeURIComponent(token)+"/notifications",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"reply",notificationId,body:data.get("body")})});
+   const result=await response.json() as {error?:string};
+   if(!response.ok)throw Error(result.error||"Could not send reply");
+   form.reset();setSuccess("Reply sent to the membership office.");await refreshNotifications();
+  }catch(e){setError(e instanceof Error?e.message:"Could not send reply")}finally{setBusy(false)}
+ }
+
+ async function resolveNotification(notificationId:number){
+  if(!token)return;setBusy(true);setError("");
+  try{
+   const response=await fetch("/api/member/"+encodeURIComponent(token)+"/notifications",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"resolve",notificationId})});
+   const result=await response.json() as {error?:string};
+   if(!response.ok)throw Error(result.error||"Could not resolve conversation");
+   await refreshNotifications();
+  }catch(e){setError(e instanceof Error?e.message:"Could not resolve conversation")}finally{setBusy(false)}
+ }
 
  async function submit(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();setError("");setSuccess("");setBusy(true);
@@ -41,6 +87,7 @@ export default function MemberPortal({params}:{params:Promise<{token:string}>}){
  const effectiveStatus=member?.status==="active"&&member.expiresAt&&member.expiresAt<today?"expired":member?.status;
  const daysRemaining=member?.expiresAt?Math.ceil((new Date(member.expiresAt+"T23:59:59").getTime()-Date.now())/86400000):null;
  const selectedPayment=PAYMENT_METHODS.find(method=>method.code===paymentMethod);
+ const unreadNotifications=notifications.filter(n=>n.unread).length;
 
  return <main className="member-shell">
   <header className="member-header"><Link href="/" className="member-brand"><span className="mini-crest">TR</span><span>TOWNSHIP ROLLERS FC</span></Link><div className="member-header-actions"><span>{settings.seasonName}</span><a href="/member-logout">Sign out</a></div></header>
@@ -69,6 +116,35 @@ export default function MemberPortal({params}:{params:Promise<{token:string}>}){
       {success&&<p className="form-success" role="status">{success}</p>}{error&&<p className="form-error" role="alert">{error}</p>}
      </section>
     </div>
+
+    <section className="member-panel" style={{marginTop:18}}>
+     <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+      <div><p className="eyebrow">MEMBER NOTIFICATIONS</p><h2 style={{margin:"4px 0"}}>Messages & queries</h2><p className="muted">Ask the membership office a question or respond to requests from the club.</p></div>
+      <span className={"badge "+(unreadNotifications?"pending":"active")}>{unreadNotifications?unreadNotifications+" unread":"Up to date"}</span>
+     </div>
+
+     <form onSubmit={submitQuery} className="proof-form" style={{marginTop:16}}>
+      <label>Query subject<input name="title" maxLength={160} required placeholder="e.g. Membership status, payment, personal details"/></label>
+      <label>Your message<textarea name="body" required minLength={5} maxLength={2000} rows={4} placeholder="Tell the membership office how they can help."/></label>
+      <button className="primary" disabled={busy}>Send query</button>
+     </form>
+
+     <div style={{display:"grid",gap:12,marginTop:18}}>
+      {notificationsLoading&&<p className="muted">Loading notifications…</p>}
+      {!notificationsLoading&&!notifications.length&&<p className="muted">No notifications or conversations yet.</p>}
+      {notifications.map(n=><article key={n.id} style={{border:"1px solid #e3e7ef",borderRadius:12,padding:16,background:n.unread?"#fff9e8":"#fff"}}>
+       <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"start",flexWrap:"wrap"}}>
+        <div><small style={{textTransform:"uppercase",fontWeight:700}}>{n.category.replaceAll("_"," ")}</small><h3 style={{margin:"4px 0 6px"}}>{n.title}</h3></div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{n.actionRequired&&<span className="badge pending">Action required</span>}<span className={"badge "+(n.status==="resolved"?"active":"pending")}>{n.status}</span></div>
+       </div>
+       <p>{n.body}</p><small className="muted">{when(n.createdAt)}</small>
+       {n.messages.map(m=><div key={m.id} style={{marginTop:10,padding:"10px 12px",borderRadius:9,background:m.senderRole==="member"?"#f6f8fb":"#eef4ff"}}>
+        <strong>{m.senderRole==="member"?"You":"Membership office"}</strong><p style={{margin:"5px 0"}}>{m.body}</p><small className="muted">{when(m.createdAt)}</small>
+       </div>)}
+       {n.status!=="resolved"&&<form onSubmit={e=>void replyNotification(n.id,e)} style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}><input name="body" required maxLength={2000} placeholder="Reply to this conversation" style={{flex:"1 1 260px"}}/><button className="secondary" disabled={busy}>Reply</button><button type="button" className="secondary" disabled={busy} onClick={()=>void resolveNotification(n.id)}>Mark resolved</button></form>}
+      </article>)}
+     </div>
+    </section>
    </>}
   </div>
  </main>;
