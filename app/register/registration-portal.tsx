@@ -19,14 +19,22 @@ function niceDate(value:string){return new Intl.DateTimeFormat("en-BW",{day:"2-d
 
 export default function Portal({accountEmail,settings}:{accountEmail:string;settings:MembershipSettings}){
  const dobRef=useRef<HTMLInputElement>(null);
- const [active,setActive]=useState("register"),[gender,setGender]=useState(""),[location,setLocation]=useState(""),[paymentMethod,setPaymentMethod]=useState(""),[paymentMethodDetail,setPaymentMethodDetail]=useState(""),[fileName,setFileName]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState<{membershipId:string;expiresAt:string;verificationEmailSent:boolean}|null>(null),[error,setError]=useState("");
+ const [active,setActive]=useState("register"),[gender,setGender]=useState(""),[location,setLocation]=useState(""),[paymentMethod,setPaymentMethod]=useState(""),[paymentMethodDetail,setPaymentMethodDetail]=useState(""),[fileName,setFileName]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState<{membershipId:string;expiresAt:string;verificationEmailSent:boolean}|null>(null),[error,setError]=useState(""),[accountMethod,setAccountMethod]=useState<"email"|"phone">("email"),[phone,setPhone]=useState(""),[otp,setOtp]=useState(""),[otpSent,setOtpSent]=useState(false),[phoneVerified,setPhoneVerified]=useState(false),[otpNotice,setOtpNotice]=useState("");
  const latestBirthDate=useMemo(()=>new Date().toISOString().slice(0,10),[]);
  const selectedPayment=PAYMENT_METHODS.find(method=>method.code===paymentMethod);
 
  function openDatePicker(){const input=dobRef.current;if(!input)return;input.focus();try{input.showPicker?.()}catch{}}
+ async function sendOtp(){
+  setBusy(true);setError("");setOtpNotice("");
+  try{const response=await fetch("/api/phone-otp/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})});const data=await response.json() as {ok?:boolean;error?:string;remainingToday?:number};if(!response.ok||!data.ok)throw Error(data.error||"Could not send verification code.");setOtpSent(true);setPhoneVerified(false);setOtpNotice("4-digit code sent. "+String(data.remainingToday??0)+" send(s) remaining today.");}catch(err){setError(err instanceof Error?err.message:"Could not send verification code.")}finally{setBusy(false)}
+ }
+ async function verifyOtp(){
+  setBusy(true);setError("");
+  try{const response=await fetch("/api/phone-otp/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone,code:otp})});const data=await response.json() as {ok?:boolean;error?:string};if(!response.ok||!data.ok)throw Error(data.error||"Verification failed.");setPhoneVerified(true);setOtpNotice("Phone number verified.");}catch(err){setError(err instanceof Error?err.message:"Verification failed.")}finally{setBusy(false)}
+ }
  async function submit(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();setBusy(true);setError("");
-  const form=new FormData(e.currentTarget);form.set("gender",gender);form.set("membershipLocation",location);form.set("paymentMethod",paymentMethod);form.set("paymentMethodDetail",paymentMethodDetail);
+  const form=new FormData(e.currentTarget);form.set("gender",gender);form.set("membershipLocation",location);form.set("paymentMethod",paymentMethod);form.set("paymentMethodDetail",paymentMethodDetail);form.set("accountMethod",accountMethod);if(accountMethod==="phone"&&!phoneVerified){setBusy(false);setError("Verify your phone number before submitting.");return;}
   try{
    const response=await fetch("/api/register",{method:"POST",body:form});
    const data=await response.json() as {membershipId?:string;expiresAt?:string;error?:string;verificationEmailSent?:boolean};
