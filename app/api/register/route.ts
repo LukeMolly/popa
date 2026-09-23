@@ -4,11 +4,12 @@ import { calculateMembershipExpiry, getMembershipSettings } from "../../../lib/m
 import { writeAudit } from "../../../lib/audit";
 import { issueEmailVerification, notifyAdminsOfRegistration } from "../../../lib/email-verification";
 import { PAYMENT_METHOD_CODES } from "../../../lib/payment-methods";
+import { normalizeBotswanaPhone } from "../../../lib/phone-otp";
 import { createMemberNotification } from "../../../lib/member-notifications";
 const env = { DB };
 
 export const dynamic = "force-dynamic";
-const fields = ["fullName","idNumber","dateOfBirth","placeOfBirth","membershipLocation","gender","email","phone","password","paymentMethod"];
+const fields = ["fullName","idNumber","dateOfBirth","placeOfBirth","membershipLocation","gender","password","paymentMethod"];
 const fail = (error:string,status=400) => Response.json({error},{status});
 const locations=["Gaborone","Molepolole","Mochudi","Francistown","Maun","Palapye","Lobatse","Other"];
 const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -30,8 +31,10 @@ export async function POST(request:Request){
   const placeOfBirth=String(form.get("placeOfBirth")).trim().replace(/\s+/g," ");
   const membershipLocation=String(form.get("membershipLocation")).trim();
   const gender=String(form.get("gender")).trim().toLowerCase();
-  const email=String(form.get("email")).trim().toLowerCase();
-  const phone=String(form.get("phone")).trim();
+  const accountMethod=String(form.get("accountMethod")||"email").trim().toLowerCase();
+  const email=String(form.get("email")||"").trim().toLowerCase();
+  const rawPhone=String(form.get("phone")||"").trim();
+  const phone=rawPhone?normalizeBotswanaPhone(rawPhone):null;
   const password=String(form.get("password"));
   const confirmPassword=String(form.get("confirmPassword")||"");
   const paymentMethod=String(form.get("paymentMethod")||"").trim().toLowerCase();
@@ -39,8 +42,10 @@ export async function POST(request:Request){
 
   if(fullName.length<3||fullName.length>160||!fullName.includes(" "))return fail("Enter your first name and surname.");
   if(!idPattern.test(idNumber))return fail("Enter a valid Omang or passport number.");
-  if(!emailPattern.test(email)||email.length>160)return fail("Enter a valid email address.");
-  if(!phonePattern.test(phone))return fail("Enter a valid mobile number.");
+  if(!["email","phone"].includes(accountMethod))return fail("Choose email or phone number for account opening.");
+  if(accountMethod==="email"&&(!emailPattern.test(email)||email.length>160))return fail("Enter a valid email address.");
+  if(accountMethod==="phone"&&!phone)return fail("Enter a valid Botswana mobile number: +267 followed by 8 digits.");
+  if(email&&(!emailPattern.test(email)||email.length>160))return fail("Enter a valid email address.");
   if(!locations.includes(membershipLocation))return fail("Choose a valid membership location.");
   if(!["female","male","other"].includes(gender))return fail("Choose a valid gender.");
   if(placeOfBirth.length<2||placeOfBirth.length>120)return fail("Enter a valid place of birth.");
