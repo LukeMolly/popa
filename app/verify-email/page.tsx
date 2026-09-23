@@ -9,8 +9,8 @@ export default async function VerifyEmailPage({searchParams}:{searchParams:Promi
  if(!token)return <main className="member-login-page"><section className="member-login-stage"><section className="member-login-card"><p className="eyebrow">EMAIL VERIFICATION</p><h1>Verification link missing</h1><p>Open the verification link from your Township Rollers email, or request a new one from the member login screen.</p><a className="member-login-primary" href="/member-login">Member login</a></section></section></main>;
 
  const result=await verifyEmailToken(token);
- if(!result.ok){
-  const message=result.reason==="expired"?"This verification link has expired.":"This verification link is invalid or has already been used.";
+ if(!result.ok || !result.member){
+  const message=!result.ok && result.reason==="expired"?"This verification link has expired.":"This verification link is invalid or has already been used.";
   return <main className="member-login-page"><section className="member-login-stage"><section className="member-login-card"><p className="eyebrow">EMAIL VERIFICATION</p><h1>Verification could not be completed</h1><p>{message}</p><a className="member-login-primary" href="/member-login">Request a new verification email</a></section></section></main>;
  }
 
