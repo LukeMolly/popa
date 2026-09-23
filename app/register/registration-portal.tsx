@@ -72,10 +72,10 @@ export default function Portal({accountEmail,settings}:{accountEmail:string;sett
        <div style={{margin:"18px 0"}}>
         <strong style={{display:"block",marginBottom:8}}>Choose where/how you paid</strong>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
-         {PAYMENT_METHODS.map(method=><button key={method.code} type="button" onClick={()=>{setPaymentMethod(method.code);if(method.code!=="other")setPaymentMethodDetail("")}} style={{padding:"14px",borderRadius:10,border:paymentMethod===method.code?"2px solid #f6b519":"1px solid #d9dee8",background:paymentMethod===method.code?"#fff8df":"#fff",fontWeight:700,cursor:"pointer"}}>{method.label}</button>)}
+         {PAYMENT_METHODS.map(method=><button key={method.code} type="button" className={`payment-method payment-${method.code}${paymentMethod===method.code?" selected":""}`} onClick={()=>{setPaymentMethod(method.code);if(method.code!=="other")setPaymentMethodDetail("")}}>{method.label}</button>)}
         </div>
         <input type="hidden" name="paymentMethod" value={paymentMethod}/>
-        {selectedPayment&&selectedPayment.code!=="other"&&<div style={{marginTop:12,padding:14,borderRadius:10,background:"#f7f9fc",lineHeight:1.55}}>
+        {selectedPayment&&selectedPayment.code!=="other"&&<div className={`bank-details bank-${selectedPayment.code}`}>
          <strong>{selectedPayment.accountName}</strong><br/>
          <span>{selectedPayment.bankName}</span><br/>
          <span>Account: <b>{selectedPayment.accountNumber}</b></span><br/>
