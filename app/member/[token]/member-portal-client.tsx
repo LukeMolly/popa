@@ -114,6 +114,7 @@ export default function MemberPortal({params}:{params:Promise<{token:string}>}){
       <div><dt>Email</dt><dd>{member.email||"Not provided"} · <strong>{member.emailVerifiedAt?"Verified":"Unverified"}</strong>{!member.emailVerifiedAt&&member.email&&<button type="button" className="secondary" style={{marginLeft:10}} disabled={verifyBusy} onClick={()=>void sendEmailVerification()}>{verifyBusy?"Sending…":"Verify email"}</button>}</dd></div>
       <div><dt>Mobile</dt><dd>{member.phone||"Not provided"} · <strong>{member.phoneVerifiedAt?"Verified":"Unverified"}</strong></dd></div>
      </div>
+     {member.phoneVerifiedAt&&<div style={{marginTop:12}}><a className="secondary" href="/change-password">Customize 4-character PIN</a><p className="muted">Changing your PIN requires a one-time SMS verification code.</p></div>}
      {!member.phoneVerifiedAt&&member.phone&&<div className="proof-form" style={{marginTop:12}}>
       <p className="muted">Verify this number once to enable mobile-number + PIN login.</p>
       {!otpSent?<button type="button" className="primary" disabled={verifyBusy} onClick={()=>void sendVerificationCode()}>{verifyBusy?"Sending…":"Verify mobile number"}</button>:<>
