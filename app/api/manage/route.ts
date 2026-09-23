@@ -36,6 +36,59 @@ export async function POST(request:Request){
    return Response.json({id});
   }
 
+  if(data.action==="kyc-update"){
+   const id=clean(data.id,30),first=clean(data.firstName,80),last=clean(data.lastName,80),email=clean(data.email,160).toLowerCase(),phone=clean(data.phone,30),idNumber=clean(data.idNumber,80),dateOfBirth=clean(data.dateOfBirth,10),placeOfBirth=clean(data.placeOfBirth,120),membershipLocation=clean(data.membershipLocation,120),gender=clean(data.gender,40);
+   if(!id||!first||!last)return fail("Member, first name and last name are required.");
+   if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return fail("Enter a valid email address.");
+   if(phone&&!/^\\+?[0-9][0-9\\s-]{6,19}$/.test(phone))return fail("Enter a valid mobile number.");
+   if(dateOfBirth&&(!/^\\d{4}-\\d{2}-\\d{2}$/.test(dateOfBirth)||Number.isNaN(Date.parse(dateOfBirth+"T00:00:00Z"))))return fail("Enter a valid date of birth.");
+   const before=await db.prepare("SELECT first_name AS firstName,last_name AS lastName,email,phone,id_number AS idNumber,date_of_birth AS dateOfBirth,place_of_birth AS placeOfBirth,membership_location AS membershipLocation,gender FROM members WHERE id=?").bind(id).first();
+   if(!before)return fail("Member not found.",404);
+   await db.prepare("UPDATE members SET first_name=?,last_name=?,email=?,phone=?,id_number=?,date_of_birth=?,place_of_birth=?,membership_location=?,gender=? WHERE id=?").bind(first,last,email,phone,idNumber||null,dateOfBirth||null,placeOfBirth||null,membershipLocation||null,gender||null,id).run();
+   await writeAudit(admin,"member_kyc_updated","member",id,before,{firstName:first,lastName:last,email,phone,idNumber,dateOfBirth,placeOfBirth,membershipLocation,gender},"KYC corrected by membership administrator");
+   return Response.json({ok:true});
+  }
+
+  if(data.action==="archive"){
+   const id=clean(data.id,30);
+   const before=await db.prepare("SELECT id,status FROM members WHERE id=?").bind(id).first() as {id:string;status:string}|null;
+   if(!before)return fail("Member not found.",404);
+   await db.batch([db.prepare("UPDATE members SET status='archived' WHERE id=?").bind(id),db.prepare("DELETE FROM member_sessions WHERE member_id=?").bind(id)]);
+   await writeAudit(admin,"member_archived","member",id,before,{status:"archived"},"Member archived; record retained");
+   return Response.json({ok:true});
+  }
+
+  if(data.action==="restore"){
+   const id=clean(data.id,30);
+   const before=await db.prepare("SELECT id,status FROM members WHERE id=?").bind(id).first() as {id:string;status:string}|null;
+   if(!before)return fail("Member not found.",404);
+   if(before.status!=="archived")return fail("Only archived members can be restored.");
+   await db.prepare("UPDATE members SET status='pending' WHERE id=?").bind(id).run();
+   await writeAudit(admin,"member_restored","member",id,before,{status:"pending"},"Archived member restored to pending");
+   return Response.json({ok:true});
+  }
+
+  if(data.action==="delete"){
+   if(admin.role!=="executive")return fail("Executive administrator access required to permanently delete a member.",403);
+   const id=clean(data.id,30),reason=clean(data.reason,300);
+   if(!id||!reason)return fail("Member and deletion reason are required.");
+   const before=await db.prepare("SELECT id,first_name AS firstName,last_name AS lastName,email,phone,status FROM members WHERE id=?").bind(id).first();
+   if(!before)return fail("Member not found.",404);
+   await db.batch([
+    db.prepare("DELETE FROM member_sessions WHERE member_id=?").bind(id),
+    db.prepare("DELETE FROM member_login_attempts WHERE email IN (SELECT email FROM members WHERE id=?)").bind(id),
+    db.prepare("DELETE FROM password_recovery_requests WHERE member_id=?").bind(id),
+    db.prepare("DELETE FROM email_verification_tokens WHERE member_id=?").bind(id),
+    db.prepare("DELETE FROM member_notification_messages WHERE notification_id IN (SELECT id FROM member_notifications WHERE member_id=?)").bind(id),
+    db.prepare("DELETE FROM member_notifications WHERE member_id=?").bind(id),
+    db.prepare("UPDATE promos SET member_id=NULL,status='available' WHERE member_id=?").bind(id),
+    db.prepare("DELETE FROM payments WHERE member_id=?").bind(id),
+    db.prepare("DELETE FROM members WHERE id=?").bind(id)
+   ]);
+   await writeAudit(admin,"member_deleted","member",id,before,undefined,"Executive deletion: "+reason);
+   return Response.json({ok:true});
+  }
+
   if(data.action==="status"){
    const id=clean(data.id,30),status=clean(data.status,20);
    if(!["active","pending","expired","suspended"].includes(status))return fail("Invalid status.");
