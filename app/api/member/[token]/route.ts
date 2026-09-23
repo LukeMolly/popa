@@ -1,6 +1,5 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../../lib/platform";
-import { getChatGPTUser } from "../../../chatgpt-auth";
-import { isClubAdmin } from "../../../admin-auth";
+import { getMemberSession } from "../../../../lib/member-auth";
 import { expireDueMemberships, getMembershipSettings } from "../../../../lib/membership";
 import { writeAudit } from "../../../../lib/audit";
 import { emailAdminsPaymentSubmitted } from "../../../../lib/account-emails";
@@ -11,11 +10,10 @@ export const dynamic="force-dynamic";
 type Context={params:Promise<{token:string}>};
 
 async function authorisedMember(token:string){
- const user=await getChatGPTUser();
- if(!user)return null;
+ const session=await getMemberSession();
+ if(!session)return null;
  const member=await env.DB.prepare("SELECT id,email,first_name AS firstName,last_name AS lastName FROM members WHERE token=?").bind(token).first() as {id:string;email:string;firstName:string;lastName:string}|null;
- if(!member)return null;
- if(member.email.toLowerCase()!==user.email.toLowerCase()&&!(await isClubAdmin(["executive","membership"])))return null;
+ if(!member||member.id!==session.id)return null;
  return member;
 }
 
@@ -24,7 +22,7 @@ export async function GET(_request:Request,{params}:Context){
   const {token}=await params;
   if(!(await authorisedMember(token)))return Response.json({error:"Member sign-in required."},{status:403});
   await expireDueMemberships();
-  const member=await env.DB.prepare("SELECT id,first_name AS firstName,last_name AS lastName,status,expires_at AS expiresAt,token FROM members WHERE token=?").bind(token).first();
+  const member=await env.DB.prepare("SELECT id,first_name AS firstName,last_name AS lastName,status,expires_at AS expiresAt,token,email,phone,email_verified_at AS emailVerifiedAt,phone_verified_at AS phoneVerifiedAt FROM members WHERE token=?").bind(token).first();
   if(!member)return Response.json({error:"Member not found."},{status:404});
   const [payment,settings]=await Promise.all([
    env.DB.prepare("SELECT id,amount,reference,status,note,payment_method AS paymentMethod,payment_method_detail AS paymentMethodDetail,created_at AS createdAt FROM payments WHERE member_id=? ORDER BY created_at DESC LIMIT 1").bind(member.id).first(),
