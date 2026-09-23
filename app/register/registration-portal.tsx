@@ -11,6 +11,7 @@ import type { MembershipSettings } from "../../lib/membership";
 import { PAYMENT_METHODS } from "../../lib/payment-methods";
 
 const locations=["Gaborone","Molepolole","Mochudi","Francistown","Maun","Palapye","Lobatse","Other"];
+const countryCodes=[["Botswana","+267"],["South Africa","+27"],["Zimbabwe","+263"],["Zambia","+260"],["Namibia","+264"],["Lesotho","+266"],["Eswatini","+268"],["Other",""]];
 
 function Field({label,children,hint}:{label:string;children:React.ReactNode;hint?:string}){
  return <label className="field"><span>{label}</span>{children}{hint&&<small>{hint}</small>}</label>;
@@ -19,22 +20,22 @@ function niceDate(value:string){return new Intl.DateTimeFormat("en-BW",{day:"2-d
 
 export default function Portal({accountEmail,settings}:{accountEmail:string;settings:MembershipSettings}){
  const dobRef=useRef<HTMLInputElement>(null);
- const [active,setActive]=useState("register"),[gender,setGender]=useState(""),[location,setLocation]=useState(""),[paymentMethod,setPaymentMethod]=useState(""),[paymentMethodDetail,setPaymentMethodDetail]=useState(""),[fileName,setFileName]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState<{membershipId:string;expiresAt:string;verificationEmailSent:boolean}|null>(null),[error,setError]=useState(""),[accountMethod,setAccountMethod]=useState<"email"|"phone">("email"),[phone,setPhone]=useState(""),[otp,setOtp]=useState(""),[otpSent,setOtpSent]=useState(false),[phoneVerified,setPhoneVerified]=useState(false),[otpNotice,setOtpNotice]=useState("");
+ const [active,setActive]=useState("register"),[gender,setGender]=useState(""),[location,setLocation]=useState(""),[paymentMethod,setPaymentMethod]=useState(""),[paymentMethodDetail,setPaymentMethodDetail]=useState(""),[fileName,setFileName]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState<{membershipId:string;expiresAt:string;verificationEmailSent:boolean}|null>(null),[error,setError]=useState(""),[accountMethod,setAccountMethod]=useState<"email"|"phone">("email"),[countryCode,setCountryCode]=useState("+267"),[phone,setPhone]=useState(""),[otp,setOtp]=useState(""),[otpSent,setOtpSent]=useState(false),[phoneVerified,setPhoneVerified]=useState(false),[otpNotice,setOtpNotice]=useState("");
  const latestBirthDate=useMemo(()=>new Date().toISOString().slice(0,10),[]);
  const selectedPayment=PAYMENT_METHODS.find(method=>method.code===paymentMethod);
 
  function openDatePicker(){const input=dobRef.current;if(!input)return;input.focus();try{input.showPicker?.()}catch{}}
  async function sendOtp(){
   setBusy(true);setError("");setOtpNotice("");
-  try{const response=await fetch("/api/phone-otp/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})});const data=await response.json() as {ok?:boolean;error?:string;remainingToday?:number};if(!response.ok||!data.ok)throw Error(data.error||"Could not send verification code.");setOtpSent(true);setPhoneVerified(false);setOtpNotice("4-digit code sent. "+String(data.remainingToday??0)+" send(s) remaining today.");}catch(err){setError(err instanceof Error?err.message:"Could not send verification code.")}finally{setBusy(false)}
+  try{const response=await fetch("/api/phone-otp/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:countryCode+phone})});const data=await response.json() as {ok?:boolean;error?:string;remainingToday?:number};if(!response.ok||!data.ok)throw Error(data.error||"Could not send verification code.");setOtpSent(true);setPhoneVerified(false);setOtpNotice("4-digit code sent. "+String(data.remainingToday??0)+" send(s) remaining today.");}catch(err){setError(err instanceof Error?err.message:"Could not send verification code.")}finally{setBusy(false)}
  }
  async function verifyOtp(){
   setBusy(true);setError("");
-  try{const response=await fetch("/api/phone-otp/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone,code:otp})});const data=await response.json() as {ok?:boolean;error?:string};if(!response.ok||!data.ok)throw Error(data.error||"Verification failed.");setPhoneVerified(true);setOtpNotice("Phone number verified.");}catch(err){setError(err instanceof Error?err.message:"Verification failed.")}finally{setBusy(false)}
+  try{const response=await fetch("/api/phone-otp/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:countryCode+phone,code:otp})});const data=await response.json() as {ok?:boolean;error?:string};if(!response.ok||!data.ok)throw Error(data.error||"Verification failed.");setPhoneVerified(true);setOtpNotice("Phone number verified.");}catch(err){setError(err instanceof Error?err.message:"Verification failed.")}finally{setBusy(false)}
  }
  async function submit(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();setBusy(true);setError("");
-  const form=new FormData(e.currentTarget);form.set("gender",gender);form.set("membershipLocation",location);form.set("paymentMethod",paymentMethod);form.set("paymentMethodDetail",paymentMethodDetail);form.set("accountMethod",accountMethod);if(accountMethod==="phone"&&!phoneVerified){setBusy(false);setError("Verify your phone number before submitting.");return;}
+  const form=new FormData(e.currentTarget);form.set("gender",gender);form.set("membershipLocation",location);form.set("paymentMethod",paymentMethod);form.set("paymentMethodDetail",paymentMethodDetail);form.set("accountMethod",accountMethod);form.set("countryCode",countryCode);form.set("phone",countryCode+phone);if(accountMethod==="phone"&&!phoneVerified){setBusy(false);setError("Verify your phone number before submitting.");return;}
   try{
    const response=await fetch("/api/register",{method:"POST",body:form});
    const data=await response.json() as {membershipId?:string;expiresAt?:string;error?:string;verificationEmailSent?:boolean};
@@ -61,7 +62,7 @@ export default function Portal({accountEmail,settings}:{accountEmail:string;sett
        <Field label="Date of birth" hint="Select your date from the calendar"><div className="date-picker-field"><Input ref={dobRef} name="dateOfBirth" required type="date" min="1906-01-01" max={latestBirthDate} autoComplete="bday"/><button type="button" onClick={openDatePicker} aria-label="Open date of birth calendar"><CalendarDays/></button></div></Field>
        <Field label="Place of birth"><Input name="placeOfBirth" required minLength={2} maxLength={120} placeholder="Town or village"/></Field>
        <Field label="Email address"><Input name="email" required type="email" maxLength={160} defaultValue={accountEmail} placeholder="name@example.com"/></Field>
-       <Field label="Mobile number"><div className="botswana-phone-field"><span className="botswana-prefix" aria-hidden="true">🇧🇼 <b>+267</b></span><Input name="phone" required type="tel" inputMode="numeric" pattern="[0-9]{8}" maxLength={8} placeholder="7X XXX XXX"/></div></Field>
+       <Field label="Country of origin / country code"><Select value={countryCode} onValueChange={value=>{setCountryCode(value);setPhoneVerified(false);setOtpSent(false)}}><SelectTrigger className="select-full"><SelectValue placeholder="Select country code"/></SelectTrigger><SelectContent>{countryCodes.map(([country,code])=><SelectItem key={country} value={code||"other"}>{country} {code}</SelectItem>)}</SelectContent></Select></Field>\n       <Field label="Mobile number"><div className="botswana-phone-field"><span className="botswana-prefix"><b>{countryCode==="other"?"Code":countryCode}</b></span><Input required type="tel" inputMode="numeric" value={phone} onChange={e=>{setPhone(e.target.value.replace(/\\D/g,""));setPhoneVerified(false)}} pattern="[0-9]{7,12}" maxLength={12} placeholder={countryCode==="+267"?"7X XXX XXX":"Mobile number"}/></div></Field>
        <Field label="Create 4-character password" hint="Exactly 4 letters and/or numbers"><Input name="password" required type="password" minLength={4} maxLength={4} pattern="[A-Za-z0-9]{4}" autoComplete="new-password" placeholder="e.g. A7B2"/></Field>
        <Field label="Confirm password"><Input name="confirmPassword" required type="password" minLength={4} maxLength={4} pattern="[A-Za-z0-9]{4}" autoComplete="new-password" placeholder="Repeat password"/></Field>
        <Field label="Membership location"><Select value={location} onValueChange={setLocation} required><SelectTrigger className="select-full membership-location"><SelectValue placeholder="Select branch or town"/></SelectTrigger><SelectContent className="location-menu">{locations.map(item=><SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></Field>
