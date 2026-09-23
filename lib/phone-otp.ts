@@ -20,16 +20,17 @@ export async function sendPhoneOtp(rawPhone:string){
  if(Number(row?.count||0)>=DAILY_LIMIT)return {ok:false as const,error:"Daily OTP limit reached. A maximum of 3 codes can be sent to this number per day."};
  const code=String(randomInt(0,10000)).padStart(4,"0");
  const now=new Date(),expires=new Date(now.getTime()+OTP_TTL_MINUTES*60*1000);
- await DB.prepare("INSERT INTO phone_otp_codes (id,phone,code_hash,expires_at,used_at,created_at) VALUES (?,?,?,?,?,?)").bind(crypto.randomUUID(),phone,hash(code),expires.toISOString(),"",now.toISOString()).run();
 
  const apiKey=process.env.TEXTBEE_API_KEY,deviceId=process.env.TEXTBEE_DEVICE_ID;
- if(!apiKey||!deviceId)return {ok:false as const,error:"SMS gateway is not configured."};
+ if(!apiKey)return {ok:false as const,error:"SMS gateway is not configured."};
  const base=(process.env.TEXTBEE_API_URL||"https://api.textbee.dev/api/v1").replace(/\/$/,"");
- const response=await fetch(base+"/gateway/devices/"+encodeURIComponent(deviceId)+"/send-sms",{
+ const response=await fetch(base+"/gateway/send-sms",{
   method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey},
-  body:JSON.stringify({recipients:[phone],message:"Your Township Rollers verification code is "+code+". It expires in 10 minutes."})
+  body:JSON.stringify({recipients:[phone],message:"Your Township Rollers verification code is "+code+". It expires in 10 minutes.",...(deviceId?{deviceId}:{})})
  });
  if(!response.ok){console.error("TextBee SMS failed",response.status,await response.text());return {ok:false as const,error:"Verification SMS could not be sent. Please try again."};}
+
+ await DB.prepare("INSERT INTO phone_otp_codes (id,phone,code_hash,expires_at,used_at,created_at) VALUES (?,?,?,?,?,?)").bind(crypto.randomUUID(),phone,hash(code),expires.toISOString(),"",now.toISOString()).run();
  return {ok:true as const,phone,expiresAt:expires.toISOString(),remainingToday:DAILY_LIMIT-Number(row?.count||0)-1};
 }
 
