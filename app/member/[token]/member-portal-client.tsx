@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import Link from "next/link";
 import { PAYMENT_METHODS, paymentMethodLabel } from "../../../lib/payment-methods";
 
-type Member={id:string;firstName:string;lastName:string;status:string;expiresAt:string;token:string;reminderDays?:number};
+type Member={id:string;firstName:string;lastName:string;status:string;expiresAt:string;token:string;email:string;phone:string;emailVerifiedAt:string;phoneVerifiedAt:string;reminderDays?:number};
 type Payment={id:string;amount:number;reference:string;status:string;note:string;paymentMethod?:string;paymentMethodDetail?:string;createdAt:string}|null;
 type Settings={seasonName:string;membershipFee:number;expiryReminderDays:number};
 type NotificationMessage={id:string;notificationId:number;senderRole:string;senderEmail:string;senderName:string;body:string;createdAt:string};
@@ -12,7 +12,7 @@ type MemberNotification={id:number;title:string;body:string;category:string;crea
 const when=(date:string)=>new Date(date).toLocaleString("en-BW",{dateStyle:"medium",timeStyle:"short"});
 
 export default function MemberPortal({params}:{params:Promise<{token:string}>}){
- const [token,setToken]=useState(""),[member,setMember]=useState<Member|null>(null),[payment,setPayment]=useState<Payment>(null),[settings,setSettings]=useState<Settings>({seasonName:"Membership",membershipFee:200,expiryReminderDays:7}),[notifications,setNotifications]=useState<MemberNotification[]>([]),[paymentMethod,setPaymentMethod]=useState(""),[paymentMethodDetail,setPaymentMethodDetail]=useState(""),[qr,setQr]=useState(""),[error,setError]=useState(""),[success,setSuccess]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[notificationsLoading,setNotificationsLoading]=useState(false);
+ const [token,setToken]=useState(""),[member,setMember]=useState<Member|null>(null),[payment,setPayment]=useState<Payment>(null),[settings,setSettings]=useState<Settings>({seasonName:"Membership",membershipFee:200,expiryReminderDays:7}),[notifications,setNotifications]=useState<MemberNotification[]>([]),[paymentMethod,setPaymentMethod]=useState(""),[paymentMethodDetail,setPaymentMethodDetail]=useState(""),[qr,setQr]=useState(""),[error,setError]=useState(""),[success,setSuccess]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[notificationsLoading,setNotificationsLoading]=useState(false),[otp,setOtp]=useState(""),[otpSent,setOtpSent]=useState(false),[verifyBusy,setVerifyBusy]=useState(false);
  useEffect(()=>{params.then(({token})=>setToken(token))},[params]);
  useEffect(()=>{
   if(!token)return;
@@ -37,6 +37,15 @@ export default function MemberPortal({params}:{params:Promise<{token:string}>}){
   }catch(e){setError(e instanceof Error?e.message:"Could not load notifications")}finally{setNotificationsLoading(false)}
  }
  useEffect(()=>{if(!token)return;void refreshNotifications();const timer=window.setInterval(()=>void refreshNotifications(),30000);return()=>window.clearInterval(timer)},[token]);
+
+ async function sendVerificationCode(){
+  if(!member?.phone)return;setVerifyBusy(true);setError("");setSuccess("");
+  try{const response=await fetch("/api/phone-otp/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:member.phone})});const data=await response.json() as {error?:string};if(!response.ok)throw Error(data.error||"Could not send verification code.");setOtpSent(true);setSuccess("A 4-digit verification code was sent to "+member.phone+".");}catch(e){setError(e instanceof Error?e.message:"Could not send verification code.")}finally{setVerifyBusy(false)}
+ }
+ async function verifyMobile(){
+  if(!member||!/^[0-9]{4}$/.test(otp)){setError("Enter the 4-digit verification code.");return}setVerifyBusy(true);setError("");setSuccess("");
+  try{const response=await fetch("/api/phone-otp/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:member.phone,code:otp})});const data=await response.json() as {error?:string};if(!response.ok)throw Error(data.error||"Verification failed.");setMember({...member,phoneVerifiedAt:new Date().toISOString()});setOtp("");setOtpSent(false);setSuccess("Mobile number verified. You can now use it to sign in.");}catch(e){setError(e instanceof Error?e.message:"Verification failed.")}finally{setVerifyBusy(false)}
+ }
 
  async function submitQuery(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();if(!token)return;setBusy(true);setError("");setSuccess("");
@@ -95,6 +104,20 @@ export default function MemberPortal({params}:{params:Promise<{token:string}>}){
    {loading?<section className="member-panel">Loading your membership…</section>:!member?<section className="member-panel" role="alert">{error||"Member record not found."}</section>:<>
     <div className="member-heading"><div><p className="eyebrow">MY MEMBERSHIP</p><h1>{member.firstName} {member.lastName}</h1><p>Member ID {member.id}</p></div><span className={"badge "+effectiveStatus}>{effectiveStatus}</span></div>
     {effectiveStatus==="expired"?<div className="expiry-alert expired"><strong>Membership expired</strong><span>Expired on {new Date(member.expiresAt+"T00:00:00").toLocaleDateString("en-BW",{dateStyle:"long"})}. Upload proof of renewal payment below.</span></div>:effectiveStatus==="active"&&daysRemaining!==null&&daysRemaining<=Number(member.reminderDays||settings.expiryReminderDays)?<div className="expiry-alert warning"><strong>Membership expires soon</strong><span>{daysRemaining<=0?"Expires today":daysRemaining+" day"+(daysRemaining===1?"":"s")+" remaining"}.</span></div>:null}
+    <section className="member-panel" style={{marginBottom:18}}>
+     <p className="eyebrow">CONTACT VERIFICATION</p><h2>Sign-in contacts</h2>
+     <div className="details">
+      <div><dt>Email</dt><dd>{member.email||"Not provided"} · <strong>{member.emailVerifiedAt?"Verified":"Unverified"}</strong></dd></div>
+      <div><dt>Mobile</dt><dd>{member.phone||"Not provided"} · <strong>{member.phoneVerifiedAt?"Verified":"Unverified"}</strong></dd></div>
+     </div>
+     {!member.phoneVerifiedAt&&member.phone&&<div className="proof-form" style={{marginTop:12}}>
+      <p className="muted">Verify this number once to enable mobile-number + PIN login.</p>
+      {!otpSent?<button type="button" className="primary" disabled={verifyBusy} onClick={()=>void sendVerificationCode()}>{verifyBusy?"Sending…":"Verify mobile number"}</button>:<>
+       <label>4-digit SMS code<input value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g,"").slice(0,4))} inputMode="numeric" autoComplete="one-time-code" maxLength={4} placeholder="0000"/></label>
+       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="button" className="primary" disabled={verifyBusy||otp.length!==4} onClick={()=>void verifyMobile()}>{verifyBusy?"Verifying…":"Confirm code"}</button><button type="button" className="secondary" disabled={verifyBusy} onClick={()=>void sendVerificationCode()}>Send another code</button></div>
+      </>}
+     </div>}
+    </section>
     <div className="member-columns">
      <section className="member-panel"><h2>Digital membership card</h2><div className="season-pass"><img className="season-art" src="/township-rollers-season-ticket.jpg" alt="Township Rollers membership card artwork"/><div className="pass-content"><span className="pass-label">MEMBERSHIP ACCESS PASS</span><strong className="pass-name">{member.firstName} {member.lastName}</strong><span className="pass-id">{member.id}</span><div className="pass-qr">{qr?<img src={qr} alt="QR code for membership verification"/>:"QR unavailable"}</div><span className={"pass-status "+effectiveStatus}>{effectiveStatus?.toUpperCase()}</span></div></div><p className="muted">The QR code verifies your current membership status.</p></section>
      <section className="member-panel">
