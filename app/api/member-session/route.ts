@@ -26,8 +26,6 @@ export async function POST(request:Request){
 
  if(!member)return fail("Incorrect email/mobile number or PIN.",401);
  if(!member.passwordHash||!member.passwordSalt)return fail("PIN setup is required. Use Forgot password to request recovery.",401);
- if(phone&&!member.phoneVerifiedAt)return Response.json({error:"Verify your phone number before signing in.",needsPhoneVerification:true},{status:403});
- if(!phone&&!member.emailVerifiedAt)return Response.json({error:"Verify your email address before signing in.",needsVerification:true},{status:403});
 
  if(!(await passwordMatches(password,member.passwordSalt,member.passwordHash))){
   const failed=(attempt?.failedCount||0)+1,lockedUntil=failed>=5?new Date(now.getTime()+15*60*1000).toISOString():"";
@@ -37,7 +35,15 @@ export async function POST(request:Request){
  await DB.prepare("DELETE FROM member_login_attempts WHERE email=?").bind(loginKey).run();
  const session=await createMemberSession(member.id);
  (await cookies()).set(MEMBER_SESSION_COOKIE,session.token,{httpOnly:true,secure:true,sameSite:"lax",path:"/",expires:session.expires});
- return Response.json({ok:true,mustChangePassword:Boolean(member.passwordMustChange)});
+ return Response.json({
+  ok:true,
+  mustChangePassword:Boolean(member.passwordMustChange),
+  verification:{
+   emailVerified:Boolean(member.emailVerifiedAt),
+   phoneVerified:Boolean(member.phoneVerifiedAt),
+   phoneVerificationRecommended:Boolean(phone&&!member.phoneVerifiedAt)
+  }
+ });
 }
 
 export async function DELETE(){
