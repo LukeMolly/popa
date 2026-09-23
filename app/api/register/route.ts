@@ -4,7 +4,7 @@ import { calculateMembershipExpiry, getMembershipSettings } from "../../../lib/m
 import { writeAudit } from "../../../lib/audit";
 import { notifyAdminsOfRegistration } from "../../../lib/email-verification";
 import { PAYMENT_METHOD_CODES } from "../../../lib/payment-methods";
-import { normalizeBotswanaPhone } from "../../../lib/phone-otp";
+import { normalizePhone } from "../../../lib/phone-otp";
 import { createMemberNotification } from "../../../lib/member-notifications";
 const env = { DB };
 
@@ -34,7 +34,7 @@ export async function POST(request:Request){
   const accountMethod=String(form.get("accountMethod")||"email").trim().toLowerCase();
   const email=String(form.get("email")||"").trim().toLowerCase();
   const rawPhone=String(form.get("phone")||"").trim();
-  const phone=rawPhone?normalizeBotswanaPhone(rawPhone):null;
+  const phone=rawPhone?normalizePhone(rawPhone):null;
   const password=String(form.get("password"));
   const confirmPassword=String(form.get("confirmPassword")||"");
   const paymentMethod=String(form.get("paymentMethod")||"").trim().toLowerCase();
@@ -44,7 +44,7 @@ export async function POST(request:Request){
   if(!idPattern.test(idNumber))return fail("Enter a valid Omang or passport number.");
   if(!["email","phone"].includes(accountMethod))return fail("Choose email or phone number for account opening.");
   if(accountMethod==="email"&&(!emailPattern.test(email)||email.length>160))return fail("Enter a valid email address.");
-  if(accountMethod==="phone"&&!phone)return fail("Enter a valid Botswana mobile number: +267 followed by 8 digits.");
+  if(accountMethod==="phone"&&!phone)return fail("Enter a valid mobile number including its country code.");
   if(email&&(!emailPattern.test(email)||email.length>160))return fail("Enter a valid email address.");
   if(!locations.includes(membershipLocation))return fail("Choose a valid membership location.");
   if(!["female","male","other"].includes(gender))return fail("Choose a valid gender.");
@@ -57,9 +57,10 @@ export async function POST(request:Request){
   if(!PAYMENT_METHOD_CODES.includes(paymentMethod as any))return fail("Choose FNB, Stanbic Bank or another payment method.");
   if(paymentMethod==="other"&&!paymentMethodDetail)return fail("Describe the other payment method used.");
 
-  const duplicate=await env.DB.prepare("SELECT id,email,id_number AS idNumber FROM members WHERE lower(email)=lower(?) OR upper(id_number)=upper(?) LIMIT 1").bind(email,idNumber).first() as {id:string;email:string;idNumber:string}|null;
+  const duplicate=await env.DB.prepare("SELECT id,email,phone,id_number AS idNumber FROM members WHERE (email<>'' AND lower(email)=lower(?)) OR (phone<>'' AND phone=?) OR upper(id_number)=upper(?) LIMIT 1").bind(email,phone||"",idNumber).first() as {id:string;email:string;phone:string;idNumber:string}|null;
   if(duplicate){
-   if(duplicate.email?.toLowerCase()===email)return fail("This email address is already linked to a membership.",409);
+   if(email&&duplicate.email?.toLowerCase()===email)return fail("This email address is already linked to a membership.",409);
+   if(phone&&duplicate.phone===phone)return fail("This mobile number is already linked to a membership.",409);
    return fail("This Omang or passport number is already registered.",409);
   }
 
@@ -106,7 +107,7 @@ export async function POST(request:Request){
   if(receiptUrl){try{await deleteReceipt(receiptUrl)}catch{}}
   console.error("Public registration failed",error);
   const text=String(error).toLowerCase();
-  if(text.includes("unique")||text.includes("23505"))return fail("This email address or identity number is already registered.",409);
+  if(text.includes("unique")||text.includes("23505"))return fail("This email address, mobile number or identity number is already registered.",409);
   return fail("Registration could not be saved. Please try again.",500);
  }
 }
