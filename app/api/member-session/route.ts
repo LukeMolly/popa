@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { DB } from "../../../lib/platform";
 import { createMemberSession, MEMBER_SESSION_COOKIE, passwordMatches, sessionTokenHash } from "../../../lib/member-auth";
-import { normalizeBotswanaPhone } from "../../../lib/phone-otp";
+import { normalizePhone } from "../../../lib/phone-otp";
 
 const fail=(error:string,status=400)=>Response.json({error},{status});
 
@@ -9,11 +9,11 @@ export async function POST(request:Request){
  const body=await request.json().catch(()=>null) as {identifier?:string;email?:string;password?:string}|null;
  const rawIdentifier=String(body?.identifier||body?.email||"").trim();
  const password=String(body?.password||"");
- const phone=normalizeBotswanaPhone(rawIdentifier);
+ const phone=normalizePhone(rawIdentifier);
  const email=phone?"":rawIdentifier.toLowerCase();
  if(!rawIdentifier||!password)return fail("Enter your email address or mobile number and 4-character PIN.");
  if(!/^[A-Za-z0-9]{4}$/.test(password))return fail("PIN must be exactly 4 letters and/or numbers.");
- if(!phone&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return fail("Enter a valid email address or Botswana mobile number.");
+ if(!phone&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return fail("Enter a valid email address or mobile number including its country code.");
 
  const loginKey=phone||email;
  const now=new Date();
