@@ -4,17 +4,22 @@ import { DB } from "./platform";
 const DAILY_LIMIT=3;
 const OTP_TTL_MINUTES=10;
 
-export function normalizeBotswanaPhone(input:string){
- const digits=input.replace(/\D/g,"");
- if(/^267\d{8}$/.test(digits))return "+"+digits;
- if(/^\d{8}$/.test(digits))return "+267"+digits;
- return null;
+export function normalizePhone(input:string){
+ const trimmed=input.trim();
+ const digits=trimmed.replace(/\D/g,"");
+ if(!digits)return null;
+ // Local 8-digit numbers remain Botswana by default; international numbers must include a country code.
+ if(!trimmed.startsWith("+")&&/^\d{8}$/.test(digits))return "+267"+digits;
+ const normalized="+"+digits;
+ return /^\+[1-9]\d{7,14}$/.test(normalized)?normalized:null;
 }
+// Backwards-compatible alias for existing imports while the app transitions to international numbers.
+export const normalizeBotswanaPhone=normalizePhone;
 const hash=(value:string)=>createHash("sha256").update(value).digest("hex");
 
 export async function sendPhoneOtp(rawPhone:string){
- const phone=normalizeBotswanaPhone(rawPhone);
- if(!phone)return {ok:false as const,error:"Enter a valid Botswana mobile number: +267 followed by 8 digits."};
+ const phone=normalizePhone(rawPhone);
+ if(!phone)return {ok:false as const,error:"Enter a valid mobile number including its country code."};
  const since=new Date();since.setUTCHours(0,0,0,0);
  const row=await DB.prepare("SELECT COUNT(*) AS count FROM phone_otp_codes WHERE phone=? AND created_at>=?").bind(phone,since.toISOString()).first<{count:number|string}>();
  if(Number(row?.count||0)>=DAILY_LIMIT)return {ok:false as const,error:"Daily OTP limit reached. A maximum of 3 codes can be sent to this number per day."};
@@ -35,7 +40,7 @@ export async function sendPhoneOtp(rawPhone:string){
 }
 
 export async function verifyPhoneOtp(rawPhone:string,code:string){
- const phone=normalizeBotswanaPhone(rawPhone);
+ const phone=normalizePhone(rawPhone);
  if(!phone||!/^\d{4}$/.test(code))return {ok:false as const,error:"Enter a valid phone number and 4-digit code."};
  const row=await DB.prepare("SELECT id,code_hash AS codeHash,expires_at AS expiresAt FROM phone_otp_codes WHERE phone=? AND used_at='' ORDER BY created_at DESC LIMIT 1").bind(phone).first<{id:string;codeHash:string;expiresAt:string}>();
  if(!row||new Date(row.expiresAt)<=new Date())return {ok:false as const,error:"This code is invalid or has expired."};
