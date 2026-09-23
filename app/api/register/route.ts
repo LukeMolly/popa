@@ -2,7 +2,7 @@ import { DB, deleteReceipt, uploadReceipt } from "../../../lib/platform";
 import { newPasswordRecord } from "../../../lib/member-auth";
 import { calculateMembershipExpiry, getMembershipSettings } from "../../../lib/membership";
 import { writeAudit } from "../../../lib/audit";
-import { issueEmailVerification, notifyAdminsOfRegistration } from "../../../lib/email-verification";
+import { notifyAdminsOfRegistration } from "../../../lib/email-verification";
 import { PAYMENT_METHOD_CODES } from "../../../lib/payment-methods";
 import { normalizeBotswanaPhone } from "../../../lib/phone-otp";
 import { createMemberNotification } from "../../../lib/member-notifications";
@@ -93,18 +93,14 @@ export async function POST(request:Request){
    status:"open"
   });
   const memberForEmail={id,email,firstName,lastName,membershipLocation};
-  const [verificationResult]=await Promise.all([
-   issueEmailVerification(memberForEmail),
-   notifyAdminsOfRegistration(memberForEmail,settings.membershipFee)
-  ]);
-  await writeAudit({email,name:fullName,role:"member"},"email_verification_issued","member",id,undefined,{email,deliveryOk:Boolean(verificationResult.ok)},"Registration verification email issued");
+  await notifyAdminsOfRegistration(memberForEmail,settings.membershipFee);
   return Response.json({
    membershipId:id,
    expiresAt:new Date(expiresAt+"T23:59:59Z").toISOString(),
    membershipFee:settings.membershipFee,
    seasonName:settings.seasonName,
-   emailVerificationRequired:true,
-   verificationEmailSent:Boolean(verificationResult.ok)
+   emailVerificationRequired:false,
+   verificationEmailSent:false
   });
  }catch(error){
   if(receiptUrl){try{await deleteReceipt(receiptUrl)}catch{}}
