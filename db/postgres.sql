@@ -116,3 +116,16 @@ CREATE TABLE IF NOT EXISTS member_login_attempts (email TEXT PRIMARY KEY, failed
 INSERT INTO club_settings (id,membership_validity_days,expiry_reminder_days,updated_at,season_name,season_start_date,season_end_date,membership_fee,registration_open)
 VALUES (1,334,7,CURRENT_TIMESTAMP::text,'2026 / 2027','2026-09-01','2027-07-31',200,1)
 ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE members ADD COLUMN IF NOT EXISTS phone_verified_at TEXT NOT NULL DEFAULT '';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_members_phone_unique ON members (phone) WHERE phone <> '';
+
+CREATE TABLE IF NOT EXISTS phone_otp_codes (
+ id TEXT PRIMARY KEY,
+ phone TEXT NOT NULL,
+ code_hash TEXT NOT NULL,
+ expires_at TEXT NOT NULL,
+ used_at TEXT NOT NULL DEFAULT '',
+ created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_phone_otp_phone_created ON phone_otp_codes (phone, created_at);
