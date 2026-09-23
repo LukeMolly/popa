@@ -38,6 +38,10 @@ export default function MemberPortal({params}:{params:Promise<{token:string}>}){
  }
  useEffect(()=>{if(!token)return;void refreshNotifications();const timer=window.setInterval(()=>void refreshNotifications(),30000);return()=>window.clearInterval(timer)},[token]);
 
+ async function sendEmailVerification(){
+  if(!member?.email)return;setVerifyBusy(true);setError("");setSuccess("");
+  try{const response=await fetch("/api/email-verification/resend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:member.email})});const data=await response.json() as {error?:string;message?:string};if(!response.ok)throw Error(data.error||"Could not send verification email.");setSuccess(data.message||"Verification email sent. Open it to verify your email address.");}catch(e){setError(e instanceof Error?e.message:"Could not send verification email.")}finally{setVerifyBusy(false)}
+ }
  async function sendVerificationCode(){
   if(!member?.phone)return;setVerifyBusy(true);setError("");setSuccess("");
   try{const response=await fetch("/api/phone-otp/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:member.phone})});const data=await response.json() as {error?:string};if(!response.ok)throw Error(data.error||"Could not send verification code.");setOtpSent(true);setSuccess("A 4-digit verification code was sent to "+member.phone+".");}catch(e){setError(e instanceof Error?e.message:"Could not send verification code.")}finally{setVerifyBusy(false)}
@@ -107,7 +111,7 @@ export default function MemberPortal({params}:{params:Promise<{token:string}>}){
     <section className="member-panel" style={{marginBottom:18}}>
      <p className="eyebrow">CONTACT VERIFICATION</p><h2>Sign-in contacts</h2>
      <div className="details">
-      <div><dt>Email</dt><dd>{member.email||"Not provided"} · <strong>{member.emailVerifiedAt?"Verified":"Unverified"}</strong></dd></div>
+      <div><dt>Email</dt><dd>{member.email||"Not provided"} · <strong>{member.emailVerifiedAt?"Verified":"Unverified"}</strong>{!member.emailVerifiedAt&&member.email&&<button type="button" className="secondary" style={{marginLeft:10}} disabled={verifyBusy} onClick={()=>void sendEmailVerification()}>{verifyBusy?"Sending…":"Verify email"}</button>}</dd></div>
       <div><dt>Mobile</dt><dd>{member.phone||"Not provided"} · <strong>{member.phoneVerifiedAt?"Verified":"Unverified"}</strong></dd></div>
      </div>
      {!member.phoneVerifiedAt&&member.phone&&<div className="proof-form" style={{marginTop:12}}>
