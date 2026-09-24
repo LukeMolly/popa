@@ -112,7 +112,8 @@ export async function POST(request:Request){
    membershipFee:settings.membershipFee,
    seasonName:settings.seasonName,
    emailVerificationRequired:false,
-   verificationEmailSent:false
+   verificationEmailSent:false,
+   memberToken:token
   });
  }catch(error){
   if(receiptUrl&&!registrationSaved){try{await deleteReceipt(receiptUrl)}catch{}}
