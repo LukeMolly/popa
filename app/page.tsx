@@ -1,11 +1,12 @@
 import { getChatGPTUser, chatGPTSignOutPath } from "./chatgpt-auth";
+import { getMemberSession } from "../lib/member-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function PortalHome(){
- const user=await getChatGPTUser();
+ const [user,memberSession]=await Promise.all([getChatGPTUser(),getMemberSession()]);
  return <main className="gateway-page">
-  <header className="gateway-header"><a href="/" className="gateway-brand"><span className="mini-crest">TR</span><span><strong>Township Rollers F.C.</strong><small>Membership Platform</small></span></a>{user&&<a href={chatGPTSignOutPath("/")} className="gateway-signout">Sign out</a>}</header>
+  <header className="gateway-header"><a href="/" className="gateway-brand"><span className="mini-crest">TR</span><span><strong>Township Rollers F.C.</strong><small>Membership Platform</small></span></a>{user&&<a href={memberSession?"/member-logout":chatGPTSignOutPath("/")} className="gateway-signout">Sign out</a>}</header>
   <section className="gateway-hero"><img src="/township-rollers-team.jpeg" alt="Township Rollers players in club colours"/><div className="gateway-overlay"/><div className="gateway-copy"><p>POPA POPA EA IPOPA</p><h1>One club.<br/>One membership platform.</h1><span>Register, manage your membership and verify your status.</span></div></section>
   <section className="gateway-actions">
    <div className="gateway-intro"><p className="eyebrow">CHOOSE YOUR ACCESS</p><h2>{user?"Welcome, "+user.displayName:"Membership access"}</h2><p>Members and administrators use the same secure platform with separate role-based dashboards.</p></div>
