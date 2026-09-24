@@ -19,6 +19,7 @@ const passwordPattern=/^[A-Za-z0-9]{4}$/;
 
 export async function POST(request:Request){
  let receiptUrl="";
+ let registrationSaved=false;
  try{
   const settings=await getMembershipSettings();
   if(!settings.registrationOpen)return fail("Membership registration is currently closed.",403);
@@ -83,18 +84,28 @@ export async function POST(request:Request){
     .bind(paymentId,id,settings.membershipFee,receiptUrl,proof.name.slice(0,200),proof.type,String(form.get("reference")||"").trim().slice(0,100),createdAt.toISOString(),paymentMethod,paymentMethodDetail)
   ]);
 
-  await writeAudit({email,name:fullName,role:"member"},"member_registered","member",id,undefined,{status:"pending",membershipLocation,gender,expiresAt,paymentMethod,paymentMethodDetail},"Public registration");
-  await createMemberNotification({
-   memberId:id,
-   title:"Registration received",
-   body:"Your Township Rollers membership application has been received. Your payment proof is awaiting review by the membership office.",
-   category:"membership_status",
-   createdByRole:"system",
-   actionRequired:false,
-   status:"open"
-  });
+  registrationSaved=true;
+  // Registration is complete once the member and payment records are stored.
+  // Audit, in-app notification and email are useful follow-up services, but a
+  // temporary failure in any of them must not turn a successful registration
+  // into a 500 response or remove the uploaded payment proof.
   const memberForEmail={id,email,firstName,lastName,membershipLocation};
-  await notifyAdminsOfRegistration(memberForEmail,settings.membershipFee);
+  const followUps=await Promise.allSettled([
+   writeAudit({email,name:fullName,role:"member"},"member_registered","member",id,undefined,{status:"pending",membershipLocation,gender,expiresAt,paymentMethod,paymentMethodDetail},"Public registration"),
+   createMemberNotification({
+    memberId:id,
+    title:"Registration received",
+    body:"Your Township Rollers membership application has been received. Your payment proof is awaiting review by the membership office.",
+    category:"membership_status",
+    createdByRole:"system",
+    actionRequired:false,
+    status:"open"
+   }),
+   notifyAdminsOfRegistration(memberForEmail,settings.membershipFee)
+  ]);
+  followUps.forEach((result,index)=>{
+   if(result.status==="rejected")console.error("Registration follow-up failed",["audit","member_notification","admin_email"][index],result.reason);
+  });
   return Response.json({
    membershipId:id,
    expiresAt:new Date(expiresAt+"T23:59:59Z").toISOString(),
@@ -104,7 +115,7 @@ export async function POST(request:Request){
    verificationEmailSent:false
   });
  }catch(error){
-  if(receiptUrl){try{await deleteReceipt(receiptUrl)}catch{}}
+  if(receiptUrl&&!registrationSaved){try{await deleteReceipt(receiptUrl)}catch{}}
   console.error("Public registration failed",error);
   const text=String(error).toLowerCase();
   if(text.includes("unique")||text.includes("23505"))return fail("This email address, mobile number or identity number is already registered.",409);
