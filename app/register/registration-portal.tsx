@@ -38,7 +38,7 @@ export default function Portal({accountEmail,settings}:{accountEmail:string;sett
   const form=new FormData(e.currentTarget);form.set("gender",gender);form.set("membershipLocation",location);form.set("paymentMethod",paymentMethod);form.set("paymentMethodDetail",paymentMethodDetail);form.set("accountMethod",accountMethod);form.set("countryCode",countryCode);form.set("phone",countryCode+phone);if(accountMethod==="phone"&&!phoneVerified){setBusy(false);setError("Verify your phone number before submitting.");return;}
   try{
    const response=await fetch("/api/register",{method:"POST",body:form});
-   const data=await response.json() as {membershipId?:string;expiresAt?:string;error?:string;verificationEmailSent?:boolean};
+   const data=await response.json() as {membershipId?:string;expiresAt?:string;memberToken?:string;error?:string;verificationEmailSent?:boolean};
    if(!response.ok||!data.membershipId||!data.expiresAt)throw new Error(data.error||"Registration could not be completed.");
    setResult({membershipId:data.membershipId,expiresAt:data.expiresAt,verificationEmailSent:Boolean(data.verificationEmailSent)});setActive("membership");
   }catch(err){setError(err instanceof Error?err.message:"Registration could not be completed.")}finally{setBusy(false)}
