@@ -105,3 +105,5 @@ export default function Portal({accountEmail,settings}:{accountEmail:string;sett
   <footer><span>Township Rollers F.C. Membership</span><span><MapPin size={14}/> Botswana</span></footer>
  </main>;
 }
+
+// Deployment refresh: registration portal newline fix
