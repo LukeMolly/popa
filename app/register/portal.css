@@ -5,3 +5,24 @@
 @media(max-width:520px){.hero img{object-position:58% center}.hero-shade{background:linear-gradient(90deg,rgba(2,13,38,.95),rgba(3,26,79,.46))}.hero-copy span{font-size:.9rem}.side-stack{grid-template-columns:1fr}.payment-copy{align-items:flex-start}.payment-copy>b{font-size:1.1rem}.gender-row{grid-template-columns:1fr;height:auto}.radio-card{height:42px}.digital-card{min-height:350px}.notice-button{margin-right:2px}}
 }
 
+
+
+/* Payment method brand inheritance */
+.payment-method{padding:14px;border-radius:10px;border:1px solid #d9dee8;background:#fff;color:#07162f;font-weight:800;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+.payment-method:hover{transform:translateY(-1px);box-shadow:0 6px 16px #07162f18}
+.payment-method.payment-fnb{border-color:#f08a24;color:#d66d0d;background:#fff8f0}
+.payment-method.payment-fnb.selected{border:2px solid #f08a24;background:#f08a24;color:#fff;box-shadow:0 7px 18px #f08a2435}
+.payment-method.payment-stanbic{border-color:#003b7a;color:#003b7a;background:#f1f7ff}
+.payment-method.payment-stanbic.selected{border:2px solid #003b7a;background:#003b7a;color:#fff;box-shadow:0 7px 18px #003b7a35}
+.payment-method.payment-other{border-color:#0755d9;color:#0755d9;background:#edf3ff}
+.payment-method.payment-other.selected{border:2px solid #0755d9;background:#0755d9;color:#fff;box-shadow:0 7px 18px #0755d935}
+.bank-details{margin-top:12px;padding:14px;border-radius:10px;line-height:1.55;border-left:5px solid}
+.bank-details.bank-fnb{background:#fff5e9;border-color:#f08a24;color:#6e3500}
+.bank-details.bank-stanbic{background:#edf5ff;border-color:#003b7a;color:#062f5b}
+
+
+/* Botswana mobile number input */
+.botswana-phone-field{display:flex;align-items:center;border:1px solid #d7dce5;border-radius:8px;background:#fff;overflow:hidden}
+.botswana-prefix{display:flex;align-items:center;gap:6px;padding:0 12px;min-height:40px;white-space:nowrap;border-right:1px solid #d7dce5;background:#f7f9fc;color:#1d2736}
+.botswana-phone-field input{border:0!important;border-radius:0!important;box-shadow:none!important;flex:1}
+.botswana-phone-field:focus-within{outline:2px solid rgba(7,85,217,.2);border-color:#0755d9}
