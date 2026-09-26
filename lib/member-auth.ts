@@ -21,7 +21,7 @@ export async function passwordMatches(password: string, salt: string, expected: 
 }
 export function sessionTokenHash(token: string) { return createHash("sha256").update(token).digest("hex"); }
 export async function createMemberSession(memberId: string) {
-  const token = randomBytes(32).toString("base64url"), now = new Date(), expires = new Date(Date.now()+30*24*60*60*1000);
+  const token = randomBytes(32).toString("base64url"), now = new Date(), expires = new Date(Date.now()+5*60*1000);
   await DB.prepare("INSERT INTO member_sessions (token_hash,member_id,expires_at,created_at) VALUES (?,?,?,?)").bind(sessionTokenHash(token),memberId,expires.toISOString(),now.toISOString()).run();
   return {token,expires};
 }
