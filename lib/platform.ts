@@ -3,8 +3,8 @@ import { del, put } from "@vercel/blob";
 
 type QueryResult = { rows: Record<string, unknown>[]; rowCount?: number };
 function connectionString() {
-  const value = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  if (!value) throw new Error("DATABASE_URL is not configured.");
+  const value = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!value) throw new Error("Database URL is not configured.");
   return value;
 }
 function postgresQuery(query: string) {
