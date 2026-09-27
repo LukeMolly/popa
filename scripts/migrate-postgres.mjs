@@ -2,16 +2,16 @@ import { readFile } from "node:fs/promises";
 import { neon } from "@neondatabase/serverless";
 import pg from "pg";
 
-const isPreview = process.env.VERCEL_ENV === "preview";
-const url = isPreview
+const useSupabase = process.env.VERCEL_ENV === "preview" || process.env.VERCEL_ENV === "production";
+const url = useSupabase
   ? process.env.SUPABASE_DATABASE_URL
   : process.env.DATABASE_URL || process.env.POSTGRES_URL;
 if (!url) {
-  if (isPreview) throw new Error("Preview requires SUPABASE_DATABASE_URL; refusing Neon fallback.");
+  if (useSupabase) throw new Error("Vercel deployment requires SUPABASE_DATABASE_URL; refusing Neon fallback.");
   console.warn("Skipping PostgreSQL migration because DATABASE_URL/POSTGRES_URL is not configured for this deployment.");
   process.exit(0);
 }
-const client = isPreview ? new pg.Client({ connectionString: url }) : null;
+const client = useSupabase ? new pg.Client({ connectionString: url }) : null;
 if (client) await client.connect();
 const sql = client ? { query: (statement, values) => client.query(statement, values) } : neon(url);
 try {
@@ -29,7 +29,7 @@ const administrators = [
 for (const [email, name, role, pinSalt, pinHash] of administrators) {
   const now = new Date().toISOString();
   await sql.query(
-    "INSERT INTO admin_users (email,name,role,active,pin_salt,pin_hash,created_at,updated_at) VALUES ($1,$2,$3,1,$4,$5,$6,$6) " + (isPreview ? "ON CONFLICT(email) DO NOTHING" : "ON CONFLICT(email) DO UPDATE SET name=excluded.name,role=excluded.role,active=1,pin_salt=excluded.pin_salt,pin_hash=excluded.pin_hash,updated_at=excluded.updated_at"),
+    "INSERT INTO admin_users (email,name,role,active,pin_salt,pin_hash,created_at,updated_at) VALUES ($1,$2,$3,1,$4,$5,$6,$6) " + (useSupabase ? "ON CONFLICT(email) DO NOTHING" : "ON CONFLICT(email) DO UPDATE SET name=excluded.name,role=excluded.role,active=1,pin_salt=excluded.pin_salt,pin_hash=excluded.pin_hash,updated_at=excluded.updated_at"),
     [email, name, role, pinSalt, pinHash, now],
   );
 }
