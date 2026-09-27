@@ -4,9 +4,9 @@ import { del, put } from "@vercel/blob";
 
 type QueryResult = { rows: Record<string, unknown>[]; rowCount?: number };
 function connectionString() {
-  if (process.env.VERCEL_ENV === "preview") {
+  if (process.env.VERCEL_ENV === "preview" || process.env.VERCEL_ENV === "production") {
     const value = process.env.SUPABASE_DATABASE_URL;
-    if (!value) throw new Error("Preview requires SUPABASE_DATABASE_URL; refusing Neon fallback.");
+    if (!value) throw new Error("Vercel deployment requires SUPABASE_DATABASE_URL; refusing Neon fallback.");
     return value;
   }
   const value = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_DATABASE_URL;
@@ -16,7 +16,7 @@ function connectionString() {
 let supabasePool: Pool | undefined;
 function queryDatabase(query: string, values: unknown[]): Promise<QueryResult> {
   const url = connectionString();
-  if (process.env.VERCEL_ENV === "preview" || (!process.env.VERCEL_ENV && process.env.SUPABASE_DATABASE_URL)) {
+  if (process.env.VERCEL_ENV === "preview" || process.env.VERCEL_ENV === "production" || (!process.env.VERCEL_ENV && process.env.SUPABASE_DATABASE_URL)) {
     supabasePool ??= new Pool({ connectionString: url, max: 2, idleTimeoutMillis: 10000 });
     return supabasePool.query(query, values) as Promise<QueryResult>;
   }
