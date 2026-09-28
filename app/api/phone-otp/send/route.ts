@@ -8,7 +8,7 @@ export async function POST(request:Request){
   const member=await getMemberSession();
   let target=String(phone||"");
   if(member){
-   const contact=await DB.prepare("SELECT phone FROM members WHERE id=?").bind(member.id).first<{phone:string}>();
+   const contact=await DB.withContext({memberId:member.id},db=>db.prepare("SELECT phone FROM members WHERE id=?").bind(member.id).first<{phone:string}>());
    if(!contact?.phone)return Response.json({error:"No mobile number is registered on this account."},{status:400});
    target=contact.phone;
   }
