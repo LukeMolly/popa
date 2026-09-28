@@ -1,5 +1,5 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../../lib/platform";
-import { getMemberSession, withMemberContext } from "../../../../lib/member-auth";
+import { getMemberSession } from "../../../../lib/member-auth";
 import { expireDueMemberships, getMembershipSettings } from "../../../../lib/membership";
 import { writeAudit } from "../../../../lib/audit";
 import { emailAdminsPaymentSubmitted } from "../../../../lib/account-emails";
@@ -21,13 +21,10 @@ export async function GET(_request:Request,{params}:Context){
  try{
   const {token}=await params;
   if(!(await authorisedMember(token)))return Response.json({error:"Member sign-in required."},{status:403});
-  await expireDueMemberships();
-  const member=await env.DB.prepare("SELECT id,first_name AS firstName,last_name AS lastName,status,expires_at AS expiresAt,token,email,phone,email_verified_at AS emailVerifiedAt,phone_verified_at AS phoneVerifiedAt FROM members WHERE token=?").bind(token).first();
+  const member=await DB.withContext({memberId:(await getMemberSession())!.id},db=>db.prepare("SELECT id,first_name AS firstName,last_name AS lastName,status,expires_at AS expiresAt,token,email,phone,email_verified_at AS emailVerifiedAt,phone_verified_at AS phoneVerifiedAt FROM members WHERE token=?").bind(token).first());
   if(!member)return Response.json({error:"Member not found."},{status:404});
-  const [payment,settings]=await Promise.all([
-   env.DB.prepare("SELECT id,amount,reference,status,note,payment_method AS paymentMethod,payment_method_detail AS paymentMethodDetail,created_at AS createdAt FROM payments WHERE member_id=? ORDER BY created_at DESC LIMIT 1").bind(member.id).first(),
-   getMembershipSettings()
-  ]);
+  const payment=await DB.withContext({memberId:(member as any).id},db=>db.prepare("SELECT id,amount,reference,status,note,payment_method AS paymentMethod,payment_method_detail AS paymentMethodDetail,created_at AS createdAt FROM payments WHERE member_id=? ORDER BY created_at DESC LIMIT 1").bind((member as any).id).first());
+  const settings=await getMembershipSettings();
   return Response.json({member:{...member,reminderDays:settings.expiryReminderDays},payment,settings},{headers:{"Cache-Control":"no-store"}});
  }catch(e){console.error(e);return Response.json({error:"Membership unavailable."},{status:500})}
 }
