@@ -21,7 +21,8 @@ export async function POST(request:Request){
  const admin=await getClubAdmin();
  if(!admin||!["executive","membership"].includes(admin.role))return fail("Membership administrator access required.",403);
  try{
-  const data=await request.json() as Record<string,unknown>,db=env.DB,now=new Date().toISOString();
+  const data=await request.json() as Record<string,unknown>,now=new Date().toISOString();
+  return await DB.withContext({adminRole:admin.role},async db=>{
 
   if(data.action==="member"){
    const first=clean(data.firstName,80),last=clean(data.lastName,80),email=clean(data.email,160).toLowerCase(),phone=clean(data.phone,30);
@@ -129,6 +130,7 @@ export async function POST(request:Request){
   }
 
   return fail("Unknown action.");
+  });
  }catch(e){
   console.error(e);
   const text=String(e).toLowerCase();
