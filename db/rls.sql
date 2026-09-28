@@ -188,6 +188,36 @@ REVOKE ALL ON FUNCTION public.trfc_bootstrap_registration_duplicate(text,text,te
 GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_register_member(text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,numeric,text,text,text,text,text,text) TO trfc_app;
 GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_registration_duplicate(text,text,text) TO trfc_app;
 
+
+-- Narrow OTP bootstrap functions. The application role can operate OTP records
+-- without receiving general table access through RLS.
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_phone_otp_count(p_phone text,p_since text)
+RETURNS bigint LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT count(*) FROM public.phone_otp_codes WHERE phone=p_phone AND created_at>=p_since
+$;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_phone_otp_create(p_id text,p_phone text,p_hash text,p_expires text,p_created text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ INSERT INTO public.phone_otp_codes(id,phone,code_hash,expires_at,used_at,created_at)
+ VALUES(p_id,p_phone,p_hash,p_expires,'',p_created)
+$;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_phone_otp_latest(p_phone text)
+RETURNS TABLE(id text,code_hash text,expires_at text) LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT o.id,o.code_hash,o.expires_at FROM public.phone_otp_codes o
+ WHERE o.phone=p_phone AND o.used_at='' ORDER BY o.created_at DESC LIMIT 1
+$;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_phone_otp_use(p_id text,p_used text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ UPDATE public.phone_otp_codes SET used_at=p_used WHERE id=p_id AND used_at=''
+$;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_phone_otp_count(text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_phone_otp_create(text,text,text,text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_phone_otp_latest(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_phone_otp_use(text,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_phone_otp_count(text,text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_phone_otp_create(text,text,text,text,text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_phone_otp_latest(text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_phone_otp_use(text,text) TO trfc_app;
+
 -- Index every ownership/join predicate used by policies and common member views.
 CREATE INDEX IF NOT EXISTS idx_payments_member_created
   ON public.payments (member_id, created_at DESC);
