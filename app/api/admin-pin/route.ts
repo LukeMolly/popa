@@ -16,13 +16,13 @@ export async function POST(request:Request){
   const supplied=admin?await hashAdminPin(pin,admin.pinSalt):"";
   if(!admin||!admin.pinHash||supplied!==admin.pinHash){
    const failed=(attempt?.failedCount||0)+1,lockedUntil=failed>=5?new Date(now.getTime()+15*60*1000).toISOString():"";
-   await env.DB.prepare("INSERT INTO admin_login_attempts (email,failed_count,locked_until,updated_at) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at").bind(email,failed,lockedUntil,now.toISOString()).run();
+   await env.DB.prepare("SELECT trfc_bootstrap_set_admin_attempt(?,?,?,?)").bind(email,failed,lockedUntil,now.toISOString()).run();
    return fail(failed>=5?"Too many incorrect attempts. Try again in 15 minutes.":"Email or PIN is incorrect.",401);
   }
   const bytes=crypto.getRandomValues(new Uint8Array(32)),token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,""),tokenHash=await hashAdminSecret(token),expiresAt=new Date(now.getTime()+3*60*1000);
-  await env.DB.prepare("DELETE FROM admin_login_attempts WHERE email=?").bind(email).run();
-  await env.DB.prepare("DELETE FROM admin_sessions WHERE email=? OR expires_at<=?").bind(email,now.toISOString()).run();
-  await env.DB.prepare("INSERT INTO admin_sessions (token_hash,email,expires_at,created_at) VALUES (?,?,?,?)").bind(tokenHash,email,expiresAt.toISOString(),now.toISOString()).run();
+  await env.DB.prepare("SELECT trfc_bootstrap_clear_admin_attempt(?)").bind(email).run();
+  await env.DB.prepare("SELECT trfc_bootstrap_delete_admin_sessions(?,?)").bind(email,now.toISOString()).run();
+  await env.DB.prepare("SELECT trfc_bootstrap_create_admin_session(?,?,?,?)").bind(tokenHash,email,expiresAt.toISOString(),now.toISOString()).run();
   const response = NextResponse.json({ok:true});
   response.cookies.set(ADMIN_SESSION_COOKIE,token,{httpOnly:true,secure:true,sameSite:"lax",path:"/",expires:expiresAt});
   return response;
@@ -31,7 +31,7 @@ export async function POST(request:Request){
 export async function DELETE(){
  try{
   const jar=await cookies(),token=jar.get(ADMIN_SESSION_COOKIE)?.value;
-  if(token)await env.DB.prepare("DELETE FROM admin_sessions WHERE token_hash=?").bind(await hashAdminSecret(token)).run();
+  if(token)await env.DB.prepare("SELECT trfc_bootstrap_delete_admin_session(?)").bind(await hashAdminSecret(token)).run();
   jar.set(ADMIN_SESSION_COOKIE,"",{httpOnly:true,secure:true,sameSite:"lax",path:"/",maxAge:0});
   return Response.json({ok:true});
  }catch(error){console.error(error);return fail("Could not sign out.",500)}
