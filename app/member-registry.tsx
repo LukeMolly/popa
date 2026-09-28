@@ -1,4 +1,5 @@
 "use client";
+import AdminSessionGuard from "../app/admin-session-guard";
 import {useCallback,useEffect,useMemo,useState} from "react";
 import QRCode from "qrcode";
 import {ArrowLeft,Copy,Download,KeyRound,Plus,Search,Users} from "lucide-react";
@@ -111,7 +112,7 @@ export default function MemberRegistry({adminRole}:{adminRole:string}){
  const selectedNotifications=selected?notifications.filter(n=>n.memberId===selected.id):[];
  const unreadNotifications=notifications.filter(n=>n.unread).length;
 
- return <div className="app">
+ return <><AdminSessionGuard/><div className="app">
   <aside className="rail">
    <div className="identity"><div className="crest">TR</div><div><strong>TOWNSHIP<br/>ROLLERS FC</strong><small>MEMBERSHIP OFFICE</small></div></div>
    <nav aria-label="Sections"><button className="on"><Users size={19}/> Membership</button></nav>
@@ -223,5 +224,5 @@ export default function MemberRegistry({adminRole}:{adminRole:string}){
    {notice&&<div className="toast" role="status">{notice}<button onClick={()=>setNotice("")}>×</button></div>}
    </div>
   </main>
- </div>;
+ </div></>;
 }
