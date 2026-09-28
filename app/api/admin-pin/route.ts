@@ -12,7 +12,7 @@ export async function POST(request:Request){
   if(!/^\S+@\S+\.\S+$/.test(email)||!/^\d{6}$/.test(pin))return fail("Enter your authorised email and six-digit PIN.");
   const attempt=await env.DB.prepare("SELECT failed_count AS failedCount,locked_until AS lockedUntil FROM admin_login_attempts WHERE email=?").bind(email).first() as {failedCount:number;lockedUntil:string}|null;
   if(attempt?.lockedUntil&&attempt.lockedUntil>now.toISOString())return fail("Too many incorrect attempts. Try again in 15 minutes.",429);
-  const admin=await env.DB.prepare("SELECT email,pin_salt AS pinSalt,pin_hash AS pinHash FROM admin_users WHERE email=? AND active=1").bind(email).first() as {email:string;pinSalt:string;pinHash:string}|null;
+  const admin=await env.DB.prepare("SELECT email,pin_salt AS pinSalt,pin_hash AS pinHash FROM trfc_bootstrap_admin_login(?)").bind(email).first() as {email:string;pinSalt:string;pinHash:string}|null;
   const supplied=admin?await hashAdminPin(pin,admin.pinSalt):"";
   if(!admin||!admin.pinHash||supplied!==admin.pinHash){
    const failed=(attempt?.failedCount||0)+1,lockedUntil=failed>=5?new Date(now.getTime()+15*60*1000).toISOString():"";
