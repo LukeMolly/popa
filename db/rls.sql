@@ -66,7 +66,7 @@ AS $
   WHERE (p_is_phone AND m.phone=p_identifier)
      OR (NOT p_is_phone AND lower(m.email)=lower(p_identifier))
   LIMIT 1;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_member_session(p_token_hash text, p_now text)
 RETURNS TABLE(id text, email text, first_name text, last_name text, password_must_change boolean)
@@ -78,7 +78,7 @@ AS $
   FROM public.member_sessions s JOIN public.members m ON m.id=s.member_id
   WHERE s.token_hash=p_token_hash AND s.expires_at>p_now
   LIMIT 1;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_admin_login(p_email text)
 RETURNS TABLE(email text, name text, role text, pin_salt text, pin_hash text)
@@ -88,7 +88,7 @@ SET search_path = public, pg_temp
 AS $
   SELECT a.email,a.name,a.role,a.pin_salt,a.pin_hash FROM public.admin_users a
   WHERE lower(a.email)=lower(p_email) AND a.active=1 LIMIT 1;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_admin_session(p_token_hash text, p_now text)
 RETURNS TABLE(email text, name text, role text)
@@ -99,7 +99,7 @@ AS $
   SELECT a.email,a.name,a.role FROM public.admin_sessions s
   JOIN public.admin_users a ON a.email=s.email
   WHERE s.token_hash=p_token_hash AND s.expires_at>p_now AND a.active=1 LIMIT 1;
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_member_login(text,boolean) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_member_session(text,text) FROM PUBLIC;
@@ -113,33 +113,33 @@ GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_admin_session(text,text) TO trfc
 -- Bootstrap write helpers keep pre-authentication security tables behind a
 -- deliberately small interface instead of granting broad RLS exceptions.
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_create_member_session(p_token_hash text,p_member_id text,p_expires_at text,p_created_at text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  INSERT INTO public.member_sessions(token_hash,member_id,expires_at,created_at) VALUES(p_token_hash,p_member_id,p_expires_at,p_created_at);
-$;
+$$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_delete_member_session(p_token_hash text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $ DELETE FROM public.member_sessions WHERE token_hash=p_token_hash; $;
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.member_sessions WHERE token_hash=p_token_hash; $;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_set_member_attempt(p_key text,p_failed integer,p_locked text,p_updated text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  INSERT INTO public.member_login_attempts(email,failed_count,locked_until,updated_at) VALUES(p_key,p_failed,p_locked,p_updated)
  ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at;
-$;
+$$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_clear_member_attempt(p_key text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $ DELETE FROM public.member_login_attempts WHERE email=p_key; $;
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.member_login_attempts WHERE email=p_key; $;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_create_admin_session(p_token_hash text,p_email text,p_expires_at text,p_created_at text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  INSERT INTO public.admin_sessions(token_hash,email,expires_at,created_at) VALUES(p_token_hash,p_email,p_expires_at,p_created_at);
-$;
+$$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_delete_admin_sessions(p_email text,p_now text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $ DELETE FROM public.admin_sessions WHERE email=p_email OR expires_at<=p_now; $;
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.admin_sessions WHERE email=p_email OR expires_at<=p_now; $;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_delete_admin_session(p_token_hash text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $ DELETE FROM public.admin_sessions WHERE token_hash=p_token_hash; $;
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.admin_sessions WHERE token_hash=p_token_hash; $;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_set_admin_attempt(p_email text,p_failed integer,p_locked text,p_updated text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  INSERT INTO public.admin_login_attempts(email,failed_count,locked_until,updated_at) VALUES(p_email,p_failed,p_locked,p_updated)
  ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at;
-$;
+$$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_clear_admin_attempt(p_email text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $ DELETE FROM public.admin_login_attempts WHERE email=p_email; $;
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.admin_login_attempts WHERE email=p_email; $;
 
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_create_member_session(text,text,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_delete_member_session(text) FROM PUBLIC;
@@ -167,7 +167,7 @@ CREATE OR REPLACE FUNCTION public.trfc_bootstrap_register_member(
  p_id text,p_first text,p_last text,p_phone text,p_email text,p_expires text,p_token text,p_created text,
  p_id_number text,p_dob text,p_birth_place text,p_location text,p_gender text,p_password_salt text,p_password_hash text,
  p_payment_id text,p_amount numeric,p_receipt_key text,p_receipt_name text,p_receipt_type text,p_reference text,p_payment_method text,p_payment_detail text)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
  INSERT INTO public.members(id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender,password_salt,password_hash,password_must_change)
  VALUES(p_id,p_first,p_last,NULLIF(p_phone,''),p_email,'pending',p_expires,p_token,p_created,p_id_number,p_dob,p_birth_place,p_location,p_gender,p_password_salt,p_password_hash,FALSE);
@@ -177,12 +177,12 @@ END; $;
 
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_registration_duplicate(p_email text,p_phone text,p_id_number text)
 RETURNS TABLE(id text,email text,phone text,id_number text)
-LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT m.id,m.email,m.phone,m.id_number FROM public.members m
  WHERE (p_email<>'' AND m.email<>'' AND lower(m.email)=lower(p_email))
     OR (p_phone<>'' AND m.phone<>'' AND m.phone=p_phone)
     OR upper(m.id_number)=upper(p_id_number) LIMIT 1;
-$;
+$$;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_register_member(text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,numeric,text,text,text,text,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_registration_duplicate(text,text,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_register_member(text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,numeric,text,text,text,text,text,text) TO trfc_app;
@@ -194,14 +194,14 @@ GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_registration_duplicate(text,text
 -- Login-attempt bootstrap reads used before an authenticated context exists.
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_member_attempt(p_key text)
 RETURNS TABLE(failed_count integer,locked_until text)
-LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT a.failed_count,a.locked_until FROM public.member_login_attempts a WHERE a.email=p_key LIMIT 1
-$;
+$$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_admin_attempt(p_email text)
 RETURNS TABLE(failed_count integer,locked_until text)
-LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT a.failed_count,a.locked_until FROM public.admin_login_attempts a WHERE a.email=p_email LIMIT 1
-$;
+$$;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_member_attempt(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_admin_attempt(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_member_attempt(text) TO trfc_app;
@@ -211,7 +211,7 @@ GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_admin_attempt(text) TO trfc_app;
 -- transition, but the function only targets already-due active memberships.
 CREATE OR REPLACE FUNCTION public.trfc_system_expire_due_memberships(p_today text)
 RETURNS TABLE(id text,email text,first_name text,last_name text,expires_at text)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
  RETURN QUERY
  WITH due AS (
@@ -221,7 +221,7 @@ BEGIN
  )
  SELECT d.id,d.email,d.first_name,d.last_name,d.expires_at FROM due d;
 END;
-$;
+$$;
 REVOKE ALL ON FUNCTION public.trfc_system_expire_due_memberships(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.trfc_system_expire_due_memberships(text) TO trfc_app;
 
@@ -229,22 +229,22 @@ GRANT EXECUTE ON FUNCTION public.trfc_system_expire_due_memberships(text) TO trf
 -- the fields needed by the recovery workflow and keep the public response generic.
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_recovery_member(p_member_id text,p_email text)
 RETURNS TABLE(id text,first_name text,last_name text,email text)
-LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT m.id,m.first_name,m.last_name,m.email FROM public.members m
  WHERE m.id=p_member_id AND lower(m.email)=lower(p_email) LIMIT 1
-$;
+$$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_recovery_recent(p_member_id text)
 RETURNS TABLE(id text,requested_at text)
-LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT r.id,r.requested_at FROM public.password_recovery_requests r
  WHERE r.member_id=p_member_id AND r.status='pending'
  ORDER BY r.requested_at DESC LIMIT 1
-$;
+$$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_recovery_create(p_id text,p_member_id text,p_email text,p_requested text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  INSERT INTO public.password_recovery_requests(id,member_id,email,status,requested_at,resolved_at,resolved_by)
  VALUES(p_id,p_member_id,p_email,'pending',p_requested,'','')
-$;
+$$;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_recovery_member(text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_recovery_recent(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_recovery_create(text,text,text,text) FROM PUBLIC;
@@ -255,23 +255,23 @@ GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_recovery_create(text,text,text,t
 -- Narrow OTP bootstrap functions. The application role can operate OTP records
 -- without receiving general table access through RLS.
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_phone_otp_count(p_phone text,p_since text)
-RETURNS bigint LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS bigint LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT count(*) FROM public.phone_otp_codes WHERE phone=p_phone AND created_at>=p_since
-$;
+$$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_phone_otp_create(p_id text,p_phone text,p_hash text,p_expires text,p_created text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  INSERT INTO public.phone_otp_codes(id,phone,code_hash,expires_at,used_at,created_at)
  VALUES(p_id,p_phone,p_hash,p_expires,'',p_created)
-$;
+$$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_phone_otp_latest(p_phone text)
-RETURNS TABLE(id text,code_hash text,expires_at text) LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS TABLE(id text,code_hash text,expires_at text) LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT o.id,o.code_hash,o.expires_at FROM public.phone_otp_codes o
  WHERE o.phone=p_phone AND o.used_at='' ORDER BY o.created_at DESC LIMIT 1
-$;
+$$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_phone_otp_use(p_id text,p_used text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  UPDATE public.phone_otp_codes SET used_at=p_used WHERE id=p_id AND used_at=''
-$;
+$$;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_phone_otp_count(text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_phone_otp_create(text,text,text,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_phone_otp_latest(text) FROM PUBLIC;
