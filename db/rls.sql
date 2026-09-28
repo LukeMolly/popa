@@ -52,6 +52,64 @@ GRANT EXECUTE ON FUNCTION public.trfc_member_id() TO trfc_app;
 GRANT EXECUTE ON FUNCTION public.trfc_admin_role() TO trfc_app;
 GRANT EXECUTE ON FUNCTION public.trfc_is_admin() TO trfc_app;
 
+-- Bootstrap functions are the narrow bridge used before an RLS identity is known.
+-- They expose only the records needed to validate a login/session; application
+-- code still performs the existing scrypt/PBKDF2 verification.
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_member_login(p_identifier text, p_is_phone boolean)
+RETURNS TABLE(id text, password_salt text, password_hash text, password_must_change boolean, email_verified_at text, phone_verified_at text)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+  SELECT m.id,m.password_salt,m.password_hash,m.password_must_change,m.email_verified_at::text,m.phone_verified_at::text
+  FROM public.members m
+  WHERE (p_is_phone AND m.phone=p_identifier)
+     OR (NOT p_is_phone AND lower(m.email)=lower(p_identifier))
+  LIMIT 1;
+$;
+
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_member_session(p_token_hash text, p_now text)
+RETURNS TABLE(id text, email text, first_name text, last_name text, password_must_change boolean)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+  SELECT m.id,m.email,m.first_name,m.last_name,m.password_must_change
+  FROM public.member_sessions s JOIN public.members m ON m.id=s.member_id
+  WHERE s.token_hash=p_token_hash AND s.expires_at>p_now
+  LIMIT 1;
+$;
+
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_admin_login(p_email text)
+RETURNS TABLE(email text, name text, role text, pin_salt text, pin_hash text)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+  SELECT a.email,a.name,a.role,a.pin_salt,a.pin_hash FROM public.admin_users a
+  WHERE lower(a.email)=lower(p_email) AND a.active=1 LIMIT 1;
+$;
+
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_admin_session(p_token_hash text, p_now text)
+RETURNS TABLE(email text, name text, role text)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+  SELECT a.email,a.name,a.role FROM public.admin_sessions s
+  JOIN public.admin_users a ON a.email=s.email
+  WHERE s.token_hash=p_token_hash AND s.expires_at>p_now AND a.active=1 LIMIT 1;
+$;
+
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_member_login(text,boolean) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_member_session(text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_admin_login(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_admin_session(text,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_member_login(text,boolean) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_member_session(text,text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_admin_login(text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_admin_session(text,text) TO trfc_app;
+
 -- Index every ownership/join predicate used by policies and common member views.
 CREATE INDEX IF NOT EXISTS idx_payments_member_created
   ON public.payments (member_id, created_at DESC);
