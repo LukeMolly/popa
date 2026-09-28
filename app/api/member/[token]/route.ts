@@ -1,5 +1,5 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../../lib/platform";
-import { getMemberSession } from "../../../../lib/member-auth";
+import { getMemberSession, withMemberContext } from "../../../../lib/member-auth";
 import { expireDueMemberships, getMembershipSettings } from "../../../../lib/membership";
 import { writeAudit } from "../../../../lib/audit";
 import { emailAdminsPaymentSubmitted } from "../../../../lib/account-emails";
@@ -12,7 +12,7 @@ type Context={params:Promise<{token:string}>};
 async function authorisedMember(token:string){
  const session=await getMemberSession();
  if(!session)return null;
- const member=await env.DB.prepare("SELECT id,email,first_name AS firstName,last_name AS lastName FROM members WHERE token=?").bind(token).first() as {id:string;email:string;firstName:string;lastName:string}|null;
+ const member=await DB.withContext({memberId:session.id},db=>db.prepare("SELECT id,email,first_name AS firstName,last_name AS lastName FROM members WHERE token=?").bind(token).first()) as {id:string;email:string;firstName:string;lastName:string}|null;
  if(!member||member.id!==session.id)return null;
  return member;
 }
