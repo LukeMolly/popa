@@ -47,9 +47,9 @@ export async function POST(request:Request,{params}:Context){
    const title=clean(data?.title,160),body=clean(data?.body,2000);
    if(title.length<3)return fail("Enter a short subject for your query.");
    if(body.length<5)return fail("Enter your query or message.");
-   const created=await createMemberNotification({
+   const created=await DB.withContext({memberId:member.id},db=>createMemberNotification({
     memberId:member.id,title,body,category:"query",createdByRole:"member",createdByEmail:member.email,actionRequired:false,status:"open"
-   });
+   },db));
    if(!created?.id)return fail("Could not create your query.",500);
    await writeAudit({email:member.email,name:member.firstName+" "+member.lastName,role:"member"},"member_query_created","notification",String(created.id),undefined,{title},"Member submitted an in-app query");
    return Response.json({ok:true,id:created.id});
@@ -59,17 +59,17 @@ export async function POST(request:Request,{params}:Context){
    const notificationId=Number(data?.notificationId),body=clean(data?.body,2000);
    if(!Number.isInteger(notificationId)||notificationId<1)return fail("Invalid conversation.");
    if(body.length<2)return fail("Enter a reply.");
-   const thread=await DB.prepare("SELECT id,status FROM member_notifications WHERE id=? AND member_id=?").bind(notificationId,member.id).first<{id:number;status:string}>();
+   const thread=await DB.withContext({memberId:member.id},db=>db.prepare("SELECT id,status FROM member_notifications WHERE id=? AND member_id=?").bind(notificationId,member.id).first<{id:number;status:string}>());
    if(!thread)return fail("Conversation not found.",404);
    if(thread.status==="resolved")return fail("This conversation has been resolved.",409);
-   await addNotificationMessage({notificationId,senderRole:"member",senderEmail:member.email,senderName:member.firstName+" "+member.lastName,body,status:"open",actionRequired:false});
+   await DB.withContext({memberId:member.id},db=>addNotificationMessage({notificationId,senderRole:"member",senderEmail:member.email,senderName:member.firstName+" "+member.lastName,body,status:"open",actionRequired:false},db));
    await writeAudit({email:member.email,name:member.firstName+" "+member.lastName,role:"member"},"member_notification_replied","notification",String(notificationId),undefined,{reply:true},"Member replied to membership office");
    return Response.json({ok:true});
   }
 
   if(action==="resolve"){
    const notificationId=Number(data?.notificationId);
-   const result=await DB.prepare("UPDATE member_notifications SET status='resolved',action_required=0,updated_at=? WHERE id=? AND member_id=?").bind(new Date().toISOString(),notificationId,member.id).run();
+   const result=await DB.withContext({memberId:member.id},db=>db.prepare("UPDATE member_notifications SET status='resolved',action_required=0,updated_at=? WHERE id=? AND member_id=?").bind(new Date().toISOString(),notificationId,member.id).run());
    if(!result.meta.changes)return fail("Conversation not found.",404);
    return Response.json({ok:true});
   }
