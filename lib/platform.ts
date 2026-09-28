@@ -57,8 +57,8 @@ export const DB = {
 
   // RLS-aware transaction. Identity is transaction-local so pooled connections
   // can never leak one member/admin context into another request.
-  async withContext<T>(context: DatabaseContext, work: (db: { prepare(query: string): Statement }) => Promise<T>): Promise<T> {
-    if (!usesSupabase()) return work({ prepare: (query: string) => new Statement(query) });
+  async withContext<T>(context: DatabaseContext, work: (db: { prepare(query: string): Statement; batch(statements: Statement[]): Promise<unknown[]> }) => Promise<T>): Promise<T> {
+    if (!usesSupabase()) return work({ prepare: (query: string) => new Statement(query), batch: (statements: Statement[]) => Promise.all(statements.map((statement) => statement.run())) });
     const client = await pool().connect();
     try {
       await client.query("BEGIN");
@@ -66,7 +66,7 @@ export const DB = {
         context.memberId || "",
         context.adminRole || "",
       ]);
-      const result = await work({ prepare: (query: string) => new Statement(query, client) });
+      const result = await work({ prepare: (query: string) => new Statement(query, client), batch: (statements: Statement[]) => Promise.all(statements.map((statement) => statement.run())) });
       await client.query("COMMIT");
       return result;
     } catch (error) {
