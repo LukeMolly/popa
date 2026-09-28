@@ -58,7 +58,7 @@ export async function POST(request:Request){
   if(!PAYMENT_METHOD_CODES.includes(paymentMethod as any))return fail("Choose FNB, Stanbic Bank or another payment method.");
   if(paymentMethod==="other"&&!paymentMethodDetail)return fail("Describe the other payment method used.");
 
-  const duplicate=await env.DB.prepare("SELECT id,email,phone,id_number AS idNumber FROM members WHERE (email<>'' AND lower(email)=lower(?)) OR (phone<>'' AND phone=?) OR upper(id_number)=upper(?) LIMIT 1").bind(email,phone||"",idNumber).first() as {id:string;email:string;phone:string;idNumber:string}|null;
+  const duplicate=await env.DB.prepare("SELECT id,email,phone,id_number AS idNumber FROM trfc_bootstrap_registration_duplicate(?,?,?)").bind(email,phone||"",idNumber).first() as {id:string;email:string;phone:string;idNumber:string}|null;
   if(duplicate){
    if(email&&duplicate.email?.toLowerCase()===email)return fail("This email address is already linked to a membership.",409);
    if(phone&&duplicate.phone===phone)return fail("This mobile number is already linked to a membership.",409);
@@ -77,12 +77,8 @@ export async function POST(request:Request){
   receiptUrl=await uploadReceipt(receiptKey,await proof.arrayBuffer(),proof.type);
   const paymentId=crypto.randomUUID();
 
-  await env.DB.batch([
-   env.DB.prepare("INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender,password_salt,password_hash,password_must_change) VALUES (?,?,?,?,?,'pending',?,?,?,?,?,?,?,?,?,?,FALSE)")
-    .bind(id,firstName,lastName,phone,email,expiresAt,token,createdAt.toISOString(),idNumber,dob,placeOfBirth,membershipLocation,gender,passwordRecord.salt,passwordRecord.hash),
-   env.DB.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at,reviewed_by,payment_method,payment_method_detail) VALUES (?,?,?,?,?,?,?,'submitted','Registration payment',?,'','',?,?)")
-    .bind(paymentId,id,settings.membershipFee,receiptUrl,proof.name.slice(0,200),proof.type,String(form.get("reference")||"").trim().slice(0,100),createdAt.toISOString(),paymentMethod,paymentMethodDetail)
-  ]);
+  await env.DB.prepare("SELECT trfc_bootstrap_register_member(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+   .bind(id,firstName,lastName,phone||"",email,expiresAt,token,createdAt.toISOString(),idNumber,dob,placeOfBirth,membershipLocation,gender,passwordRecord.salt,passwordRecord.hash,paymentId,settings.membershipFee,receiptUrl,proof.name.slice(0,200),proof.type,String(form.get("reference")||"").trim().slice(0,100),paymentMethod,paymentMethodDetail).run();
 
   registrationSaved=true;
   // Registration is complete once the member and payment records are stored.
