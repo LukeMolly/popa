@@ -30,3 +30,9 @@ export async function getMemberSession() {
   if(!token)return null;
   return DB.prepare("SELECT id,email,first_name AS firstName,last_name AS lastName,password_must_change AS passwordMustChange FROM trfc_bootstrap_member_session(?,?)").bind(sessionTokenHash(token),new Date().toISOString()).first<{id:string;email:string;firstName:string;lastName:string;passwordMustChange:boolean}>();
 }
+
+export async function withMemberContext<T>(work:(session:{id:string;email:string;firstName:string;lastName:string;passwordMustChange:boolean},db:any)=>Promise<T>){
+ const session=await getMemberSession();
+ if(!session)return null;
+ return DB.withContext({memberId:session.id},db=>work(session,db));
+}
