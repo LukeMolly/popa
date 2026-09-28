@@ -1,3 +1,4 @@
+import AdminSessionGuard from "../../admin-session-guard";
 import { redirect } from "next/navigation";
 import { DB } from "../../../lib/platform";
 import { getClubAdmin } from "../../admin-auth";
@@ -31,7 +32,7 @@ export default async function ReportsPage(){
   const r=m.membershipLocation||"Unspecified",g=m.gender||"Unspecified",b=band(age(m.dateOfBirth));
   regions.set(r,(regions.get(r)||0)+1);genders.set(g,(genders.get(g)||0)+1);ages.set(b,(ages.get(b)||0)+1);
  }
- return <main className="office-page report-page">
+ return <><AdminSessionGuard/><main className="office-page report-page">
   <div className="office-top no-print"><a href="/admin">← Membership dashboard</a><PrintReportButton/></div>
   <div className="member-heading"><div><p className="eyebrow">TOWNSHIP ROLLERS FC</p><h1>Membership management report</h1><p>{settings.seasonName} · Generated {new Date().toLocaleString("en-BW")}</p></div></div>
   <div className="stats">
@@ -54,5 +55,5 @@ export default async function ReportsPage(){
   </div>
   <section className="member-panel"><h2>Recent audit activity</h2><div className="table-wrap"><table><thead><tr><th>Date</th><th>Administrator</th><th>Action</th><th>Record</th></tr></thead><tbody>{audits.results.map((a,i)=><tr key={i}><td>{new Date(a.createdAt).toLocaleString("en-BW")}</td><td>{a.actorName||a.actorRole||"System"}</td><td>{String(a.action).replaceAll("_"," ")}</td><td>{a.entityId}</td></tr>)}</tbody></table></div></section>
   <style>{"@media print{.no-print{display:none!important}.report-page{max-width:none;padding:0}.member-panel{break-inside:avoid;box-shadow:none}.stats{break-inside:avoid}body{background:#fff}}"}</style>
- </main>;
+ </main></>;
 }
