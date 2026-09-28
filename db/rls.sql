@@ -110,6 +110,56 @@ GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_member_session(text,text) TO trf
 GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_admin_login(text) TO trfc_app;
 GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_admin_session(text,text) TO trfc_app;
 
+-- Bootstrap write helpers keep pre-authentication security tables behind a
+-- deliberately small interface instead of granting broad RLS exceptions.
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_create_member_session(p_token_hash text,p_member_id text,p_expires_at text,p_created_at text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ INSERT INTO public.member_sessions(token_hash,member_id,expires_at,created_at) VALUES(p_token_hash,p_member_id,p_expires_at,p_created_at);
+$;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_delete_member_session(p_token_hash text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $ DELETE FROM public.member_sessions WHERE token_hash=p_token_hash; $;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_set_member_attempt(p_key text,p_failed integer,p_locked text,p_updated text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ INSERT INTO public.member_login_attempts(email,failed_count,locked_until,updated_at) VALUES(p_key,p_failed,p_locked,p_updated)
+ ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at;
+$;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_clear_member_attempt(p_key text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $ DELETE FROM public.member_login_attempts WHERE email=p_key; $;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_create_admin_session(p_token_hash text,p_email text,p_expires_at text,p_created_at text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ INSERT INTO public.admin_sessions(token_hash,email,expires_at,created_at) VALUES(p_token_hash,p_email,p_expires_at,p_created_at);
+$;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_delete_admin_sessions(p_email text,p_now text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $ DELETE FROM public.admin_sessions WHERE email=p_email OR expires_at<=p_now; $;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_delete_admin_session(p_token_hash text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $ DELETE FROM public.admin_sessions WHERE token_hash=p_token_hash; $;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_set_admin_attempt(p_email text,p_failed integer,p_locked text,p_updated text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ INSERT INTO public.admin_login_attempts(email,failed_count,locked_until,updated_at) VALUES(p_email,p_failed,p_locked,p_updated)
+ ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at;
+$;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_clear_admin_attempt(p_email text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $ DELETE FROM public.admin_login_attempts WHERE email=p_email; $;
+
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_create_member_session(text,text,text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_delete_member_session(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_set_member_attempt(text,integer,text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_clear_member_attempt(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_create_admin_session(text,text,text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_delete_admin_sessions(text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_delete_admin_session(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_set_admin_attempt(text,integer,text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_clear_admin_attempt(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_create_member_session(text,text,text,text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_delete_member_session(text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_set_member_attempt(text,integer,text,text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_clear_member_attempt(text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_create_admin_session(text,text,text,text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_delete_admin_sessions(text,text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_delete_admin_session(text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_set_admin_attempt(text,integer,text,text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_clear_admin_attempt(text) TO trfc_app;
+
 -- Index every ownership/join predicate used by policies and common member views.
 CREATE INDEX IF NOT EXISTS idx_payments_member_created
   ON public.payments (member_id, created_at DESC);
