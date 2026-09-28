@@ -6,18 +6,23 @@ type QueryResult = { rows: Record<string, unknown>[]; rowCount?: number };
 export type DatabaseContext = { memberId?: string | null; adminRole?: string | null };
 
 function connectionString() {
-  if (process.env.VERCEL_ENV === "preview" || process.env.VERCEL_ENV === "production") {
+  if (process.env.VERCEL_ENV === "preview") {
     const value = process.env.SUPABASE_DATABASE_URL;
-    if (!value) throw new Error("Vercel deployment requires SUPABASE_DATABASE_URL; refusing Neon fallback.");
+    if (!value) throw new Error("Preview deployment requires SUPABASE_DATABASE_URL.");
     return value;
   }
-  const value = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_DATABASE_URL;
+  if (process.env.VERCEL_ENV === "production") {
+    const value = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (!value) throw new Error("Production database URL is not configured.");
+    return value;
+  }
+  const value = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL;
   if (!value) throw new Error("Database URL is not configured.");
   return value;
 }
 let supabasePool: Pool | undefined;
 function usesSupabase() {
-  return process.env.VERCEL_ENV === "preview" || process.env.VERCEL_ENV === "production" || (!process.env.VERCEL_ENV && !!process.env.SUPABASE_DATABASE_URL);
+  return process.env.VERCEL_ENV === "preview" || (!process.env.VERCEL_ENV && !!process.env.SUPABASE_DATABASE_URL);
 }
 function pool() {
   supabasePool ??= new Pool({ connectionString: connectionString(), max: 2, idleTimeoutMillis: 10000 });
