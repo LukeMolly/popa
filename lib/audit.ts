@@ -1,4 +1,5 @@
 import { DB } from "./platform";
+type ScopedDB={prepare(query:string):any};
 import type { ClubAdmin } from "../app/admin-auth";
 
 export async function writeAudit(
@@ -8,10 +9,11 @@ export async function writeAudit(
   entityId: string,
   beforeValue?: unknown,
   afterValue?: unknown,
-  note = ""
+  note = "",
+  db:ScopedDB=DB
 ) {
   const now=new Date().toISOString();
-  await DB.prepare("INSERT INTO audit_logs (id,actor_email,actor_name,actor_role,action,entity_type,entity_id,before_json,after_json,note,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+  await db.prepare("INSERT INTO audit_logs (id,actor_email,actor_name,actor_role,action,entity_type,entity_id,before_json,after_json,note,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
    .bind(
     crypto.randomUUID(),
     actor?.email||"",
