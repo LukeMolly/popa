@@ -17,7 +17,7 @@ export async function POST(request:Request){
 
  const loginKey=phone||email;
  const now=new Date();
- const attempt=await DB.prepare("SELECT failed_count AS failedCount,locked_until AS lockedUntil FROM member_login_attempts WHERE email=?").bind(loginKey).first<{failedCount:number;lockedUntil:string}>();
+ const attempt=await DB.prepare("SELECT failed_count AS failedCount,locked_until AS lockedUntil FROM trfc_bootstrap_member_attempt(?)").bind(loginKey).first<{failedCount:number;lockedUntil:string}>();
  if(attempt?.lockedUntil&&new Date(attempt.lockedUntil)>now)return fail("Too many attempts. Try again in 15 minutes.",429);
 
  const member=await DB.prepare("SELECT id,password_salt AS passwordSalt,password_hash AS passwordHash,password_must_change AS passwordMustChange,email_verified_at AS emailVerifiedAt,phone_verified_at AS phoneVerifiedAt FROM trfc_bootstrap_member_login(?,?)").bind(phone||email,Boolean(phone)).first<{id:string;passwordSalt:string;passwordHash:string;passwordMustChange:boolean;emailVerifiedAt:string;phoneVerifiedAt:string}>();
