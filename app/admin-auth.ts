@@ -23,7 +23,7 @@ export async function getClubAdmin(): Promise<ClubAdmin | null> {
     if (email === executiveEmail)
       return { email, name: user.fullName || user.displayName || "Botlhe Lucas", role: "executive" };
     try {
-      const row = await env.DB.prepare("SELECT email,name,role FROM admin_users WHERE email=? AND active=1").bind(email).first() as ClubAdmin | null;
+      const row = await env.DB.prepare("SELECT email,name,role FROM trfc_bootstrap_admin_login(?) WHERE active=1").bind(email).first() as ClubAdmin | null;
       if (row && ["executive", "membership", "operations", "coach"].includes(row.role)) return row;
     } catch (error) { console.error("Administrator lookup failed", error); }
   }
