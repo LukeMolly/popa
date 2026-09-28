@@ -8,7 +8,7 @@ export default async function ProtectedMemberPage({params}:{params:Promise<{toke
  const {token}=await params,session=await getMemberSession();
  if(!session)redirect("/member-login");
  if(session.passwordMustChange)redirect("/change-password");
- const member=await DB.prepare("SELECT id FROM members WHERE token=?").bind(token).first<{id:string}>();
+ const member=await DB.withContext({memberId:session.id},db=>db.prepare("SELECT id FROM members WHERE token=?").bind(token).first<{id:string}>());
  if(!member)notFound();
  if(member.id!==session.id)redirect("/account");
  return <MemberPortal params={Promise.resolve({token})}/>;
