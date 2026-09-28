@@ -47,6 +47,11 @@ REVOKE ALL ON FUNCTION public.trfc_member_id() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_admin_role() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_is_admin() FROM PUBLIC;
 
+-- The restricted application role must be able to evaluate policy helpers.
+GRANT EXECUTE ON FUNCTION public.trfc_member_id() TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_admin_role() TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_is_admin() TO trfc_app;
+
 -- Index every ownership/join predicate used by policies and common member views.
 CREATE INDEX IF NOT EXISTS idx_payments_member_created
   ON public.payments (member_id, created_at DESC);
