@@ -190,6 +190,25 @@ GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_registration_duplicate(text,text
 
 
 
+
+-- System-only expiry bootstrap. The application role may execute the expiry
+-- transition, but the function only targets already-due active memberships.
+CREATE OR REPLACE FUNCTION public.trfc_system_expire_due_memberships(p_today text)
+RETURNS TABLE(id text,email text,first_name text,last_name text,expires_at text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+BEGIN
+ RETURN QUERY
+ WITH due AS (
+   UPDATE public.members m SET status='expired'
+   WHERE m.status='active' AND m.expires_at<>'' AND m.expires_at<p_today
+   RETURNING m.id,m.email,m.first_name,m.last_name,m.expires_at
+ )
+ SELECT d.id,d.email,d.first_name,d.last_name,d.expires_at FROM due d;
+END;
+$;
+REVOKE ALL ON FUNCTION public.trfc_system_expire_due_memberships(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.trfc_system_expire_due_memberships(text) TO trfc_app;
+
 -- Narrow password-recovery bootstrap functions. They intentionally return only
 -- the fields needed by the recovery workflow and keep the public response generic.
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_recovery_member(p_member_id text,p_email text)
