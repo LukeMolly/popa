@@ -432,32 +432,32 @@ CREATE POLICY trfc_email_delivery_admin ON public.email_delivery_log
 -- These tables are safe for read-only member access in the application context.
 -- No anonymous Supabase REST access is granted by these policies.
 CREATE POLICY trfc_updates_read ON public.updates
-  FOR SELECT USING (public.trfc_member_id() IS NOT NULL OR public.trfc_is_admin());
+  FOR SELECT USING (true);
 CREATE POLICY trfc_updates_admin_write ON public.updates
   FOR ALL USING (public.trfc_is_admin()) WITH CHECK (public.trfc_is_admin());
 
 CREATE POLICY trfc_fixtures_read ON public.fixtures
-  FOR SELECT USING (public.trfc_member_id() IS NOT NULL OR public.trfc_is_admin());
+  FOR SELECT USING (true);
 CREATE POLICY trfc_fixtures_admin_write ON public.fixtures
   FOR ALL USING (public.trfc_is_admin()) WITH CHECK (public.trfc_is_admin());
 
 CREATE POLICY trfc_standings_read ON public.standings
-  FOR SELECT USING (public.trfc_member_id() IS NOT NULL OR public.trfc_is_admin());
+  FOR SELECT USING (true);
 CREATE POLICY trfc_standings_admin_write ON public.standings
   FOR ALL USING (public.trfc_is_admin()) WITH CHECK (public.trfc_is_admin());
 
 CREATE POLICY trfc_club_updates_read ON public.club_updates
-  FOR SELECT USING (public.trfc_member_id() IS NOT NULL OR public.trfc_is_admin());
+  FOR SELECT USING (true);
 CREATE POLICY trfc_club_updates_admin_write ON public.club_updates
   FOR ALL USING (public.trfc_is_admin()) WITH CHECK (public.trfc_is_admin());
 
 CREATE POLICY trfc_players_read ON public.players
-  FOR SELECT USING (public.trfc_member_id() IS NOT NULL OR public.trfc_is_admin());
+  FOR SELECT USING (true);
 CREATE POLICY trfc_players_admin_write ON public.players
   FOR ALL USING (public.trfc_is_admin()) WITH CHECK (public.trfc_is_admin());
 
 CREATE POLICY trfc_settings_read ON public.club_settings
-  FOR SELECT USING (public.trfc_member_id() IS NOT NULL OR public.trfc_is_admin());
+  FOR SELECT USING (true);
 CREATE POLICY trfc_settings_admin_write ON public.club_settings
   FOR ALL USING (public.trfc_is_admin()) WITH CHECK (public.trfc_is_admin());
 
