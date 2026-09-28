@@ -1,4 +1,5 @@
 "use client";
+import AdminSessionGuard from "../admin-session-guard";
 import {useCallback,useEffect,useState} from "react";
 import Link from "next/link";
 import { paymentMethodLabel } from "../../lib/payment-methods";
@@ -30,7 +31,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
  const visiblePayments=paymentFilter==="all"?data.payments:data.payments.filter(p=>(p.paymentMethod||"other")===paymentFilter);
  const paymentCounts={all:data.payments.length,fnb:data.payments.filter(p=>p.paymentMethod==="fnb").length,stanbic:data.payments.filter(p=>p.paymentMethod==="stanbic").length,other:data.payments.filter(p=>!p.paymentMethod||p.paymentMethod==="other").length};
 
- return <main className="office-page">
+ return <><AdminSessionGuard/><main className="office-page">
   <div className="office-top">
    <Link href="/admin">← Membership dashboard</Link>
    {role==="executive"&&<a className="executive-admin-button" href="/admin-access">Manage administrators →</a>}
@@ -92,5 +93,5 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
    </form>
    <p className="muted">Approved payments activate membership to the configured season end date. After a season has ended, the fallback validity period is used until new season dates are configured.</p>
   </section>
- </main>;
+ </main></>;
 }
