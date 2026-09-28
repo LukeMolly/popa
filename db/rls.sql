@@ -160,6 +160,34 @@ GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_delete_admin_session(text) TO tr
 GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_set_admin_attempt(text,integer,text,text) TO trfc_app;
 GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_clear_admin_attempt(text) TO trfc_app;
 
+-- Public registration is intentionally a single SECURITY DEFINER operation.
+-- It creates only a pending member and its submitted registration payment;
+-- callers cannot choose an active status or review state.
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_register_member(
+ p_id text,p_first text,p_last text,p_phone text,p_email text,p_expires text,p_token text,p_created text,
+ p_id_number text,p_dob text,p_birth_place text,p_location text,p_gender text,p_password_salt text,p_password_hash text,
+ p_payment_id text,p_amount numeric,p_receipt_key text,p_receipt_name text,p_receipt_type text,p_reference text,p_payment_method text,p_payment_detail text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+BEGIN
+ INSERT INTO public.members(id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender,password_salt,password_hash,password_must_change)
+ VALUES(p_id,p_first,p_last,NULLIF(p_phone,''),p_email,'pending',p_expires,p_token,p_created,p_id_number,p_dob,p_birth_place,p_location,p_gender,p_password_salt,p_password_hash,FALSE);
+ INSERT INTO public.payments(id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at,reviewed_by,payment_method,payment_method_detail)
+ VALUES(p_payment_id,p_id,p_amount,p_receipt_key,p_receipt_name,p_receipt_type,p_reference,'submitted','Registration payment',p_created,'','',p_payment_method,p_payment_detail);
+END; $;
+
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_registration_duplicate(p_email text,p_phone text,p_id_number text)
+RETURNS TABLE(id text,email text,phone text,id_number text)
+LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT m.id,m.email,m.phone,m.id_number FROM public.members m
+ WHERE (p_email<>'' AND m.email<>'' AND lower(m.email)=lower(p_email))
+    OR (p_phone<>'' AND m.phone<>'' AND m.phone=p_phone)
+    OR upper(m.id_number)=upper(p_id_number) LIMIT 1;
+$;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_register_member(text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,numeric,text,text,text,text,text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_registration_duplicate(text,text,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_register_member(text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,numeric,text,text,text,text,text,text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_registration_duplicate(text,text,text) TO trfc_app;
+
 -- Index every ownership/join predicate used by policies and common member views.
 CREATE INDEX IF NOT EXISTS idx_payments_member_created
   ON public.payments (member_id, created_at DESC);
