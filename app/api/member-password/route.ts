@@ -16,14 +16,14 @@ export async function POST(request:Request){
  if(password!==String(body?.confirmPassword||""))return fail("PINs do not match.");
 
  if(!member.passwordMustChange){
-  const contact=await DB.prepare("SELECT phone,phone_verified_at AS phoneVerifiedAt FROM members WHERE id=?").bind(member.id).first<{phone:string;phoneVerifiedAt:string}>();
+  const contact=await DB.withContext({memberId:member.id},db=>db.prepare("SELECT phone,phone_verified_at AS phoneVerifiedAt FROM members WHERE id=?").bind(member.id).first<{phone:string;phoneVerifiedAt:string}>());
   if(!contact?.phone||!contact.phoneVerifiedAt)return fail("Verify your mobile number before customizing your PIN.",403);
   const verified=await verifyPhoneOtp(contact.phone,String(body?.otp||""));
   if(!verified.ok)return fail(verified.error,403);
  }
 
  const record=await newPasswordRecord(password);
- await DB.prepare("UPDATE members SET password_salt=?,password_hash=?,password_must_change=FALSE WHERE id=?").bind(record.salt,record.hash,member.id).run();
+ await DB.withContext({memberId:member.id},db=>db.prepare("UPDATE members SET password_salt=?,password_hash=?,password_must_change=FALSE WHERE id=?").bind(record.salt,record.hash,member.id).run());
  try{await writeAudit({email:member.email,name:member.firstName+" "+member.lastName,role:"member"},"password_changed","member",member.id,undefined,{passwordChanged:true,otpRequired:!member.passwordMustChange},"Member changed PIN")}catch(error){console.error("PIN audit logging failed",error)}
  return Response.json({ok:true});
  }catch(error){console.error("Member PIN change failed",error);return fail("PIN could not be changed. Please try again.",500)}
