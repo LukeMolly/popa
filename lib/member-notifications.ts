@@ -31,7 +31,7 @@ export async function createMemberNotification(input:{
    input.createdByRole==="admin"||input.createdByRole==="system"?now:"",
    now,
    input.createdByRole
-  ).first<{id:number}>();
+  ).first() as Promise<{id:number}|null>;
 }
 
 export async function addNotificationMessage(input:{
