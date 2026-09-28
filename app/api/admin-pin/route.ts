@@ -10,7 +10,7 @@ export async function POST(request:Request){
  try{
   const data=await request.json() as Record<string,unknown>,email=clean(data.email).toLowerCase(),pin=clean(data.pin,6),now=new Date();
   if(!/^\S+@\S+\.\S+$/.test(email)||!/^\d{6}$/.test(pin))return fail("Enter your authorised email and six-digit PIN.");
-  const attempt=await env.DB.prepare("SELECT failed_count AS failedCount,locked_until AS lockedUntil FROM admin_login_attempts WHERE email=?").bind(email).first() as {failedCount:number;lockedUntil:string}|null;
+  const attempt=await env.DB.prepare("SELECT failed_count AS failedCount,locked_until AS lockedUntil FROM trfc_bootstrap_admin_attempt(?)").bind(email).first() as {failedCount:number;lockedUntil:string}|null;
   if(attempt?.lockedUntil&&attempt.lockedUntil>now.toISOString())return fail("Too many incorrect attempts. Try again in 15 minutes.",429);
   const admin=await env.DB.prepare("SELECT email,pin_salt AS pinSalt,pin_hash AS pinHash FROM trfc_bootstrap_admin_login(?)").bind(email).first() as {email:string;pinSalt:string;pinHash:string}|null;
   const supplied=admin?await hashAdminPin(pin,admin.pinSalt):"";
