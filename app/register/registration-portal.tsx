@@ -45,7 +45,7 @@ export default function Portal({accountEmail,settings}:{accountEmail:string;sett
  }
 
  return <main className="portal-shell">
-  <header className="topbar"><a className="brand" href="/" aria-label="Township Rollers Membership home"><span className="crest">TR</span><span><strong>Township Rollers</strong><small>Membership Portal</small></span></a><a href="/member-login">Member login</a></header>
+  <header className="topbar"><a className="brand" href="/" aria-label="Township Rollers Membership home"><span className="crest"><img src="/township-rollers-logo.jpg" alt="Township Rollers F.C. crest"/></span><span><strong>Township Rollers</strong><small>Membership Portal</small></span></a><a href="/member-login">Member login</a></header>
 
   <section className="hero" id="top"><img src="/township-rollers-team.jpeg" alt="Township Rollers players in blue and gold club kit"/><div className="hero-shade"/><div className="hero-copy"><p>POPA POPA EA IPOPA</p><h1>Your club.<br/>Your membership.</h1><span>Register, pay and manage your membership.</span></div><div className="price-card"><small>{settings.seasonName} MEMBERSHIP</small><strong>P{settings.membershipFee}</strong><span><CalendarDays size={16}/> {niceDate(settings.seasonStartDate)} – {niceDate(settings.seasonEndDate)}</span></div></section>
 
@@ -98,7 +98,7 @@ export default function Portal({accountEmail,settings}:{accountEmail:string;sett
    </TabsContent>
 
    <TabsContent value="membership" className="member-view">
-    <section className="digital-card"><div className="card-top"><span className="crest small">TR</span><span>{settings.seasonName}</span></div><p>TOWNSHIP ROLLERS F.C.</p><h2>{result?"Membership submitted":"Your digital membership"}</h2><div className="card-details"><div><small>MEMBERSHIP ID</small><strong>{result?.membershipId||"Register to receive your ID"}</strong></div><div><small>STATUS</small><strong className="status"><i/>{result?"Pending verification":"Not registered"}</strong></div></div></section>
+    <section className="digital-card"><div className="card-top"><span className="crest small"><img src="/township-rollers-logo.jpg" alt="Township Rollers F.C. crest"/></span><span>{settings.seasonName}</span></div><p>TOWNSHIP ROLLERS F.C.</p><h2>{result?"Membership submitted":"Your digital membership"}</h2><div className="card-details"><div><small>MEMBERSHIP ID</small><strong>{result?.membershipId||"Register to receive your ID"}</strong></div><div><small>STATUS</small><strong className="status"><i/>{result?"Pending verification":"Not registered"}</strong></div></div></section>
     <section className="panel status-panel"><span className="eyebrow">MEMBERSHIP STATUS</span><h2>{result?"Registration received":"Start your membership"}</h2><p>{result?"Your application has been saved. The membership office will confirm your payment before activating your membership.":"Complete the registration form and upload proof of payment."}</p><div className="status-row"><FileCheck2/><span><small>Payment proof</small><strong>{result?"Received":"Not submitted"}</strong></span></div><div className="status-row"><CalendarDays/><span><small>Season expiry</small><strong>{result?new Date(result.expiresAt).toLocaleDateString("en-BW",{day:"2-digit",month:"long",year:"numeric"}):niceDate(settings.seasonEndDate)}</strong></span></div>{!result&&<Button onClick={()=>setActive("register")}>Register now</Button>}</section>
    </TabsContent>
   </Tabs>
