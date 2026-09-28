@@ -31,7 +31,7 @@ export async function getClubAdmin(): Promise<ClubAdmin | null> {
     const token = (await cookies()).get(ADMIN_SESSION_COOKIE)?.value;
     if (!token) return null;
     const tokenHash = await hashAdminSecret(token);
-    const row = await env.DB.prepare("SELECT a.email,a.name,a.role FROM admin_sessions s JOIN admin_users a ON a.email=s.email WHERE s.token_hash=? AND s.expires_at>? AND a.active=1").bind(tokenHash,new Date().toISOString()).first() as ClubAdmin | null;
+    const row = await env.DB.prepare("SELECT email,name,role FROM trfc_bootstrap_admin_session(?,?)").bind(tokenHash,new Date().toISOString()).first() as ClubAdmin | null;
     if (!row || !["executive", "membership", "operations", "coach"].includes(row.role)) return null;
     return row;
   } catch (error) {
