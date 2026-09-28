@@ -27,10 +27,10 @@ export async function POST(request:Request){
 
  if(!(await passwordMatches(password,member.passwordSalt,member.passwordHash))){
   const failed=(attempt?.failedCount||0)+1,lockedUntil=failed>=5?new Date(now.getTime()+15*60*1000).toISOString():"";
-  await DB.prepare("INSERT INTO member_login_attempts (email,failed_count,locked_until,updated_at) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at").bind(loginKey,failed,lockedUntil,now.toISOString()).run();
+  await DB.prepare("SELECT trfc_bootstrap_set_member_attempt(?,?,?,?)").bind(loginKey,failed,lockedUntil,now.toISOString()).run();
   return fail("Incorrect email/mobile number or PIN.",401);
  }
- await DB.prepare("DELETE FROM member_login_attempts WHERE email=?").bind(loginKey).run();
+ await DB.prepare("SELECT trfc_bootstrap_clear_member_attempt(?)").bind(loginKey).run();
  const session=await createMemberSession(member.id);
  (await cookies()).set(MEMBER_SESSION_COOKIE,session.token,{httpOnly:true,secure:true,sameSite:"lax",path:"/",expires:session.expires});
  return Response.json({
@@ -46,7 +46,7 @@ export async function POST(request:Request){
 
 export async function DELETE(){
  const store=await cookies(),token=store.get(MEMBER_SESSION_COOKIE)?.value;
- if(token)await DB.prepare("DELETE FROM member_sessions WHERE token_hash=?").bind(sessionTokenHash(token)).run();
+ if(token)await DB.prepare("SELECT trfc_bootstrap_delete_member_session(?)").bind(sessionTokenHash(token)).run();
  store.set(MEMBER_SESSION_COOKIE,"",{httpOnly:true,secure:true,sameSite:"lax",path:"/",maxAge:0});
  return Response.json({ok:true});
 }
