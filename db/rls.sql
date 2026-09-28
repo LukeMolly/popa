@@ -191,6 +191,22 @@ GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_registration_duplicate(text,text
 
 
 
+-- Login-attempt bootstrap reads used before an authenticated context exists.
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_member_attempt(p_key text)
+RETURNS TABLE(failed_count integer,locked_until text)
+LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT a.failed_count,a.locked_until FROM public.member_login_attempts a WHERE a.email=p_key LIMIT 1
+$;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_admin_attempt(p_email text)
+RETURNS TABLE(failed_count integer,locked_until text)
+LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT a.failed_count,a.locked_until FROM public.admin_login_attempts a WHERE a.email=p_email LIMIT 1
+$;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_member_attempt(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_admin_attempt(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_member_attempt(text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_admin_attempt(text) TO trfc_app;
+
 -- System-only expiry bootstrap. The application role may execute the expiry
 -- transition, but the function only targets already-due active memberships.
 CREATE OR REPLACE FUNCTION public.trfc_system_expire_due_memberships(p_today text)
