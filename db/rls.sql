@@ -60,7 +60,7 @@ RETURNS TABLE(id text, password_salt text, password_hash text, password_must_cha
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
   SELECT m.id,m.password_salt,m.password_hash,m.password_must_change,m.email_verified_at::text,m.phone_verified_at::text
   FROM public.members m
   WHERE (p_is_phone AND m.phone=p_identifier)
@@ -73,7 +73,7 @@ RETURNS TABLE(id text, email text, first_name text, last_name text, password_mus
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
   SELECT m.id,m.email,m.first_name,m.last_name,m.password_must_change
   FROM public.member_sessions s JOIN public.members m ON m.id=s.member_id
   WHERE s.token_hash=p_token_hash AND s.expires_at>p_now
@@ -85,7 +85,7 @@ RETURNS TABLE(email text, name text, role text, pin_salt text, pin_hash text)
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
   SELECT a.email,a.name,a.role,a.pin_salt,a.pin_hash FROM public.admin_users a
   WHERE lower(a.email)=lower(p_email) AND a.active=1 LIMIT 1;
 $$;
@@ -95,7 +95,7 @@ RETURNS TABLE(email text, name text, role text)
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
   SELECT a.email,a.name,a.role FROM public.admin_sessions s
   JOIN public.admin_users a ON a.email=s.email
   WHERE s.token_hash=p_token_hash AND s.expires_at>p_now AND a.active=1 LIMIT 1;
@@ -117,29 +117,29 @@ RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  INSERT INTO public.member_sessions(token_hash,member_id,expires_at,created_at) VALUES(p_token_hash,p_member_id,p_expires_at,p_created_at);
 $$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_delete_member_session(p_token_hash text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.member_sessions WHERE token_hash=p_token_hash; $;
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.member_sessions WHERE token_hash=p_token_hash; $$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_set_member_attempt(p_key text,p_failed integer,p_locked text,p_updated text)
 RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  INSERT INTO public.member_login_attempts(email,failed_count,locked_until,updated_at) VALUES(p_key,p_failed,p_locked,p_updated)
  ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at;
 $$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_clear_member_attempt(p_key text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.member_login_attempts WHERE email=p_key; $;
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.member_login_attempts WHERE email=p_key; $$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_create_admin_session(p_token_hash text,p_email text,p_expires_at text,p_created_at text)
 RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  INSERT INTO public.admin_sessions(token_hash,email,expires_at,created_at) VALUES(p_token_hash,p_email,p_expires_at,p_created_at);
 $$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_delete_admin_sessions(p_email text,p_now text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.admin_sessions WHERE email=p_email OR expires_at<=p_now; $;
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.admin_sessions WHERE email=p_email OR expires_at<=p_now; $$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_delete_admin_session(p_token_hash text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.admin_sessions WHERE token_hash=p_token_hash; $;
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.admin_sessions WHERE token_hash=p_token_hash; $$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_set_admin_attempt(p_email text,p_failed integer,p_locked text,p_updated text)
 RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
  INSERT INTO public.admin_login_attempts(email,failed_count,locked_until,updated_at) VALUES(p_email,p_failed,p_locked,p_updated)
  ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at;
 $$;
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_clear_admin_attempt(p_email text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.admin_login_attempts WHERE email=p_email; $;
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ DELETE FROM public.admin_login_attempts WHERE email=p_email; $$;
 
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_create_member_session(text,text,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trfc_bootstrap_delete_member_session(text) FROM PUBLIC;
@@ -173,7 +173,7 @@ BEGIN
  VALUES(p_id,p_first,p_last,NULLIF(p_phone,''),p_email,'pending',p_expires,p_token,p_created,p_id_number,p_dob,p_birth_place,p_location,p_gender,p_password_salt,p_password_hash,FALSE);
  INSERT INTO public.payments(id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at,reviewed_by,payment_method,payment_method_detail)
  VALUES(p_payment_id,p_id,p_amount,p_receipt_key,p_receipt_name,p_receipt_type,p_reference,'submitted','Registration payment',p_created,'','',p_payment_method,p_payment_detail);
-END; $;
+END; $$;
 
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_registration_duplicate(p_email text,p_phone text,p_id_number text)
 RETURNS TABLE(id text,email text,phone text,id_number text)
