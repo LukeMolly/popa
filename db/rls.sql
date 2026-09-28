@@ -189,6 +189,34 @@ GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_register_member(text,text,text,t
 GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_registration_duplicate(text,text,text) TO trfc_app;
 
 
+
+-- Narrow password-recovery bootstrap functions. They intentionally return only
+-- the fields needed by the recovery workflow and keep the public response generic.
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_recovery_member(p_member_id text,p_email text)
+RETURNS TABLE(id text,first_name text,last_name text,email text)
+LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT m.id,m.first_name,m.last_name,m.email FROM public.members m
+ WHERE m.id=p_member_id AND lower(m.email)=lower(p_email) LIMIT 1
+$;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_recovery_recent(p_member_id text)
+RETURNS TABLE(id text,requested_at text)
+LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT r.id,r.requested_at FROM public.password_recovery_requests r
+ WHERE r.member_id=p_member_id AND r.status='pending'
+ ORDER BY r.requested_at DESC LIMIT 1
+$;
+CREATE OR REPLACE FUNCTION public.trfc_bootstrap_recovery_create(p_id text,p_member_id text,p_email text,p_requested text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $
+ INSERT INTO public.password_recovery_requests(id,member_id,email,status,requested_at,resolved_at,resolved_by)
+ VALUES(p_id,p_member_id,p_email,'pending',p_requested,'','')
+$;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_recovery_member(text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_recovery_recent(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trfc_bootstrap_recovery_create(text,text,text,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_recovery_member(text,text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_recovery_recent(text) TO trfc_app;
+GRANT EXECUTE ON FUNCTION public.trfc_bootstrap_recovery_create(text,text,text,text) TO trfc_app;
+
 -- Narrow OTP bootstrap functions. The application role can operate OTP records
 -- without receiving general table access through RLS.
 CREATE OR REPLACE FUNCTION public.trfc_bootstrap_phone_otp_count(p_phone text,p_since text)
