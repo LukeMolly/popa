@@ -43,3 +43,9 @@ export async function isClubAdmin(roles?: ClubAdminRole[]) {
   const admin = await getClubAdmin();
   return !!admin && (!roles || roles.includes(admin.role));
 }
+
+export async function withClubAdminContext<T>(roles:ClubAdminRole[]|undefined,work:(admin:ClubAdmin,db:any)=>Promise<T>){
+ const admin=await getClubAdmin();
+ if(!admin||roles&&!roles.includes(admin.role))return null;
+ return DB.withContext({adminRole:admin.role},db=>work(admin,db));
+}
