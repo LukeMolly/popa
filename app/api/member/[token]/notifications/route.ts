@@ -1,6 +1,5 @@
 import { DB } from "../../../../../lib/platform";
-import { getChatGPTUser } from "../../../../chatgpt-auth";
-import { isClubAdmin } from "../../../../admin-auth";
+import { getMemberSession } from "../../../../../lib/member-auth";
 import { addNotificationMessage, createMemberNotification } from "../../../../../lib/member-notifications";
 import { writeAudit } from "../../../../../lib/audit";
 
@@ -10,11 +9,10 @@ const fail=(error:string,status=400)=>Response.json({error},{status});
 const clean=(value:unknown,max=2000)=>typeof value==="string"?value.trim().slice(0,max):"";
 
 async function authorisedMember(token:string){
- const user=await getChatGPTUser();
- if(!user)return null;
- const member=await DB.prepare("SELECT id,email,first_name AS firstName,last_name AS lastName FROM members WHERE token=?").bind(token).first<{id:string;email:string;firstName:string;lastName:string}>();
- if(!member)return null;
- if(member.email.toLowerCase()!==user.email.toLowerCase()&&!(await isClubAdmin(["executive","membership"])))return null;
+ const session=await getMemberSession();
+ if(!session)return null;
+ const member=await DB.withContext({memberId:session.id},db=>db.prepare("SELECT id,email,first_name AS firstName,last_name AS lastName FROM members WHERE token=?").bind(token).first<{id:string;email:string;firstName:string;lastName:string}>());
+ if(!member||member.id!==session.id)return null;
  return member;
 }
 
@@ -23,8 +21,8 @@ export async function GET(_request:Request,{params}:Context){
   const {token}=await params,member=await authorisedMember(token);
   if(!member)return fail("Member sign-in required.",403);
   const [threads,messages]=await Promise.all([
-   DB.prepare("SELECT id,title,body,category,created_by_role AS createdByRole,created_by_email AS createdByEmail,status,action_required AS actionRequired,member_read_at AS memberReadAt,admin_read_at AS adminReadAt,created_at AS createdAt,updated_at AS updatedAt,last_sender_role AS lastSenderRole FROM member_notifications WHERE member_id=? ORDER BY COALESCE(NULLIF(updated_at,''),created_at) DESC LIMIT 100").bind(member.id).all<any>(),
-   DB.prepare("SELECT msg.id,msg.notification_id AS notificationId,msg.sender_role AS senderRole,msg.sender_email AS senderEmail,msg.sender_name AS senderName,msg.body,msg.created_at AS createdAt FROM member_notification_messages msg JOIN member_notifications n ON n.id=msg.notification_id WHERE n.member_id=? ORDER BY msg.created_at ASC").bind(member.id).all<any>()
+   DB.withContext({memberId:member.id},db=>db.prepare("SELECT id,title,body,category,created_by_role AS createdByRole,created_by_email AS createdByEmail,status,action_required AS actionRequired,member_read_at AS memberReadAt,admin_read_at AS adminReadAt,created_at AS createdAt,updated_at AS updatedAt,last_sender_role AS lastSenderRole FROM member_notifications WHERE member_id=? ORDER BY COALESCE(NULLIF(updated_at,''),created_at) DESC LIMIT 100").bind(member.id).all<any>()),
+   DB.withContext({memberId:member.id},db=>db.prepare("SELECT msg.id,msg.notification_id AS notificationId,msg.sender_role AS senderRole,msg.sender_email AS senderEmail,msg.sender_name AS senderName,msg.body,msg.created_at AS createdAt FROM member_notification_messages msg JOIN member_notifications n ON n.id=msg.notification_id WHERE n.member_id=? ORDER BY msg.created_at ASC").bind(member.id).all<any>())
   ]);
   const now=new Date().toISOString();
   const result=threads.results.map(t=>({
@@ -33,7 +31,7 @@ export async function GET(_request:Request,{params}:Context){
    unread:t.lastSenderRole!=="member"&&(!t.memberReadAt||t.memberReadAt<t.updatedAt),
    messages:messages.results.filter(m=>Number(m.notificationId)===Number(t.id))
   }));
-  await DB.prepare("UPDATE member_notifications SET member_read_at=? WHERE member_id=? AND last_sender_role<>'member'").bind(now,member.id).run();
+  await DB.withContext({memberId:member.id},db=>db.prepare("UPDATE member_notifications SET member_read_at=? WHERE member_id=? AND last_sender_role<>'member'").bind(now,member.id).run());
   return Response.json({notifications:result},{headers:{"Cache-Control":"no-store"}});
  }catch(error){console.error("Member notifications unavailable",error);return fail("Notifications are unavailable right now.",500)}
 }
