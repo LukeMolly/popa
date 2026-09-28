@@ -33,7 +33,7 @@ export async function POST(request:Request){
    const expiresAt=clean(data.expiresAt,10)||calculateMembershipExpiry(settings,new Date());
    await db.prepare("INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at) VALUES (?,?,?,?,?,'pending',?,?,?)")
     .bind(id,first,last,phone,email,expiresAt,token,now).run();
-   await writeAudit(admin,"member_created","member",id,undefined,{firstName:first,lastName:last,email,phone,status:"pending",expiresAt},"Created by administrator");
+   await writeAudit(admin,"member_created","member",id,undefined,{firstName:first,lastName:last,email,phone,status:"pending",expiresAt},"Created by administrator",db);
    return Response.json({id});
   }
 
@@ -46,7 +46,7 @@ export async function POST(request:Request){
    const before=await db.prepare("SELECT first_name AS firstName,last_name AS lastName,email,phone,id_number AS idNumber,date_of_birth AS dateOfBirth,place_of_birth AS placeOfBirth,membership_location AS membershipLocation,gender FROM members WHERE id=?").bind(id).first();
    if(!before)return fail("Member not found.",404);
    await db.prepare("UPDATE members SET first_name=?,last_name=?,email=?,phone=?,id_number=?,date_of_birth=?,place_of_birth=?,membership_location=?,gender=? WHERE id=?").bind(first,last,email,phone,idNumber||null,dateOfBirth||null,placeOfBirth||null,membershipLocation||null,gender||null,id).run();
-   await writeAudit(admin,"member_kyc_updated","member",id,before,{firstName:first,lastName:last,email,phone,idNumber,dateOfBirth,placeOfBirth,membershipLocation,gender},"KYC corrected by membership administrator");
+   await writeAudit(admin,"member_kyc_updated","member",id,before,{firstName:first,lastName:last,email,phone,idNumber,dateOfBirth,placeOfBirth,membershipLocation,gender},"KYC corrected by membership administrator",db);
    return Response.json({ok:true});
   }
 
@@ -55,7 +55,7 @@ export async function POST(request:Request){
    const before=await db.prepare("SELECT id,status FROM members WHERE id=?").bind(id).first() as {id:string;status:string}|null;
    if(!before)return fail("Member not found.",404);
    await db.batch([db.prepare("UPDATE members SET status='archived' WHERE id=?").bind(id),db.prepare("DELETE FROM member_sessions WHERE member_id=?").bind(id)]);
-   await writeAudit(admin,"member_archived","member",id,before,{status:"archived"},"Member archived; record retained");
+   await writeAudit(admin,"member_archived","member",id,before,{status:"archived"},"Member archived; record retained",db);
    return Response.json({ok:true});
   }
 
@@ -65,7 +65,7 @@ export async function POST(request:Request){
    if(!before)return fail("Member not found.",404);
    if(before.status!=="archived")return fail("Only archived members can be restored.");
    await db.prepare("UPDATE members SET status='pending' WHERE id=?").bind(id).run();
-   await writeAudit(admin,"member_restored","member",id,before,{status:"pending"},"Archived member restored to pending");
+   await writeAudit(admin,"member_restored","member",id,before,{status:"pending"},"Archived member restored to pending",db);
    return Response.json({ok:true});
   }
 
@@ -86,7 +86,7 @@ export async function POST(request:Request){
     db.prepare("DELETE FROM payments WHERE member_id=?").bind(id),
     db.prepare("DELETE FROM members WHERE id=?").bind(id)
    ]);
-   await writeAudit(admin,"member_deleted","member",id,before,undefined,"Executive deletion: "+reason);
+   await writeAudit(admin,"member_deleted","member",id,before,undefined,"Executive deletion: "+reason,db);
    return Response.json({ok:true});
   }
 
@@ -98,7 +98,7 @@ export async function POST(request:Request){
    let expiresAt=member.expiresAt;
    if(status==="active"&&(!expiresAt||expiresAt<new Date().toISOString().slice(0,10)))expiresAt=calculateMembershipExpiry(await getMembershipSettings(),new Date());
    await db.prepare("UPDATE members SET status=?,expires_at=? WHERE id=?").bind(status,expiresAt,id).run();
-   await writeAudit(admin,"membership_status_changed","member",id,member,{status,expiresAt},"Manual status change");
+   await writeAudit(admin,"membership_status_changed","member",id,member,{status,expiresAt},"Manual status change",db);
    if(member.email)await emailMemberStatusChange(member,status,expiresAt);
    await notifyMembershipStatus(id,status,expiresAt);
    return Response.json({ok:true,expiresAt});
@@ -110,7 +110,7 @@ export async function POST(request:Request){
    const member=await db.prepare("SELECT status,expires_at AS expiresAt FROM members WHERE id=?").bind(id).first() as {status:string;expiresAt:string}|null;
    if(!member)return fail("Member not found.",404);
    await db.prepare("UPDATE members SET expires_at=? WHERE id=?").bind(expiresAt,id).run();
-   await writeAudit(admin,"membership_expiry_changed","member",id,member,{status:member.status,expiresAt},"Manual expiry change");
+   await writeAudit(admin,"membership_expiry_changed","member",id,member,{status:member.status,expiresAt},"Manual expiry change",db);
    return Response.json({ok:true});
   }
 
@@ -124,7 +124,7 @@ export async function POST(request:Request){
     db.prepare("DELETE FROM member_sessions WHERE member_id=?").bind(id),
     db.prepare("UPDATE password_recovery_requests SET status='resolved',resolved_at=?,resolved_by=? WHERE member_id=? AND status='pending'").bind(now,admin.email,id)
    ]);
-   await writeAudit(admin,"password_reset_issued","member",id,undefined,{temporaryCodeIssued:true},"Temporary code issued; code value is not stored in audit log");
+   await writeAudit(admin,"password_reset_issued","member",id,undefined,{temporaryCodeIssued:true},"Temporary code issued; code value is not stored in audit log",db);
    await emailMemberTemporaryCode(member,code);
    return Response.json({ok:true,temporaryCode:code});
   }
