@@ -34,10 +34,10 @@ export async function POST(request:Request,{params}:Context){
   const {token}=await params,authorised=await authorisedMember(token);
   if(!authorised)return Response.json({error:"Member sign-in required."},{status:403});
   await expireDueMemberships();
-  const member=await env.DB.prepare("SELECT id,status,expires_at AS expiresAt FROM members WHERE token=?").bind(token).first() as {id:string;status:string;expiresAt:string}|null;
+  const member=await DB.withContext({memberId:authorised.id},db=>db.prepare("SELECT id,status,expires_at AS expiresAt FROM members WHERE token=?").bind(token).first()) as {id:string;status:string;expiresAt:string}|null;
   if(!member)return Response.json({error:"Member not found."},{status:404});
   if(member.status==="active"&&member.expiresAt>=new Date().toISOString().slice(0,10))return Response.json({error:"Membership is already active."},{status:409});
-  const latest=await env.DB.prepare("SELECT status FROM payments WHERE member_id=? ORDER BY created_at DESC LIMIT 1").bind(member.id).first() as {status:string}|null;
+  const latest=await DB.withContext({memberId:authorised.id},db=>db.prepare("SELECT status FROM payments WHERE member_id=? ORDER BY created_at DESC LIMIT 1").bind(member.id).first()) as {status:string}|null;
   if(latest?.status==="submitted")return Response.json({error:"A payment is already awaiting review."},{status:409});
 
   const settings=await getMembershipSettings();
@@ -51,8 +51,7 @@ export async function POST(request:Request,{params}:Context){
 
   const id=crypto.randomUUID(),key="receipts/"+paymentMethod+"/"+id,receiptUrl=await uploadReceipt(key,await file.arrayBuffer(),type),now=new Date().toISOString();
   try{
-   await env.DB.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at,reviewed_by,payment_method,payment_method_detail) VALUES (?,?,?,?,?,?,?,'submitted','Renewal payment',?,'','',?,?)")
-    .bind(id,member.id,settings.membershipFee,receiptUrl,file.name.slice(0,200),type,reference,now,paymentMethod,paymentMethodDetail).run();
+   await DB.withContext({memberId:authorised.id},db=>db.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at,reviewed_by,payment_method,payment_method_detail) VALUES (?,?,?,?,?,?,?,'submitted','Renewal payment',?,'','',?,?)").bind(id,member.id,settings.membershipFee,receiptUrl,file.name.slice(0,200),type,reference,now,paymentMethod,paymentMethodDetail).run());
   }catch(e){await deleteReceipt(receiptUrl);throw e}
   await writeAudit({email:authorised.email,name:authorised.firstName+" "+authorised.lastName,role:"member"},"renewal_payment_submitted","payment",id,undefined,{memberId:member.id,amount:settings.membershipFee,status:"submitted",paymentMethod,paymentMethodDetail},"Member renewal submission");
   await emailAdminsPaymentSubmitted({id:authorised.id,email:authorised.email,firstName:authorised.firstName,lastName:authorised.lastName},settings.membershipFee,id);
