@@ -2,7 +2,7 @@
 import AdminSessionGuard from "../app/admin-session-guard";
 import {useCallback,useEffect,useMemo,useState} from "react";
 import QRCode from "qrcode";
-import {ArrowLeft,Copy,Download,KeyRound,Plus,Search,Users} from "lucide-react";
+import {ArrowLeft,Copy,Download,KeyRound,LogOut,Plus,Search,Users} from "lucide-react";
 import { paymentMethodLabel } from "../lib/payment-methods";
 
 type Member={
@@ -111,17 +111,18 @@ export default function MemberRegistry({adminRole}:{adminRole:string}){
  const selectedRecovery=selected?pendingRecoveries.find(r=>r.memberId===selected.id):undefined;
  const selectedNotifications=selected?notifications.filter(n=>n.memberId===selected.id):[];
  const unreadNotifications=notifications.filter(n=>n.unread).length;
+ async function adminLogout(){await fetch("/api/admin-pin",{method:"DELETE",credentials:"same-origin"});location.replace("/admin-login")}
 
  return <><AdminSessionGuard/><div className="app">
   <aside className="rail">
    <div className="identity"><div className="crest">TR</div><div><strong>TOWNSHIP<br/>ROLLERS FC</strong><small>MEMBERSHIP OFFICE</small></div></div>
    <nav aria-label="Sections"><button className="on"><Users size={19}/> Membership</button></nav>
-   <div className="rail-foot"><a href="/office" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Payments & season settings →</a><a href="/admin/reports" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Management report →</a><a href="/admin-access" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Administrator access →</a><button className="rail-signout" onClick={async()=>{await fetch("/api/admin-pin",{method:"DELETE",credentials:"same-origin"});location.replace("/admin-login")}}>Sign out →</button><span className="tiny-dot"/> Membership administration</div>
+   <div className="rail-foot"><a href="/office" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Payments & season settings →</a><a href="/admin/reports" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Management report →</a><a href="/admin-access" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Administrator access →</a><button className="rail-signout" onClick={()=>void adminLogout()}>Sign out →</button><span className="tiny-dot"/> Membership administration</div>
   </aside>
 
   <main className="main">
    <header className="top"><div className="mobile-brand"><div className="crest">TR</div><b>Township Rollers</b></div><span>MEMBERSHIP MANAGEMENT SYSTEM</span><span className="top-season">{data.settings.seasonName}</span></header>
-   <div className="content">
+   <div className="content"><button type="button" className="mobile-admin-signout" onClick={()=>void adminLogout()}><LogOut size={18}/> Sign out</button>
    {selected?<>
     <button className="back" onClick={()=>setSelected(null)}><ArrowLeft size={17}/> Back to members</button>
     <div className="page-head"><div><p className="eyebrow">MEMBER RECORD</p><h1>{selected.firstName} {selected.lastName}</h1><p className="sub">{selected.id} · Joined {new Date(selected.createdAt).toLocaleDateString("en-BW")}</p></div><Badge status={effectiveStatus(selected)}/></div>
