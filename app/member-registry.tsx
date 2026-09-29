@@ -116,7 +116,7 @@ export default function MemberRegistry({adminRole}:{adminRole:string}){
   <aside className="rail">
    <div className="identity"><div className="crest">TR</div><div><strong>TOWNSHIP<br/>ROLLERS FC</strong><small>MEMBERSHIP OFFICE</small></div></div>
    <nav aria-label="Sections"><button className="on"><Users size={19}/> Membership</button></nav>
-   <div className="rail-foot"><a href="/office" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Payments & season settings →</a><a href="/admin/reports" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Management report →</a><a href="/admin-access" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Administrator access →</a><button className="rail-signout" onClick={async()=>{await fetch("/api/admin-pin",{method:"DELETE"});location.assign("/api/auth/signout?callbackUrl=/")}}>Sign out →</button><span className="tiny-dot"/> Membership administration</div>
+   <div className="rail-foot"><a href="/office" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Payments & season settings →</a><a href="/admin/reports" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Management report →</a><a href="/admin-access" style={{color:"#ffd15a",display:"block",marginBottom:14}}>Administrator access →</a><button className="rail-signout" onClick={async()=>{await fetch("/api/admin-pin",{method:"DELETE",credentials:"same-origin"});location.replace("/admin-login")}}>Sign out →</button><span className="tiny-dot"/> Membership administration</div>
   </aside>
 
   <main className="main">
