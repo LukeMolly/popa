@@ -35,7 +35,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
   <div className="office-top">
    <Link href="/admin">← Membership dashboard</Link>
    {role==="executive"&&<a className="executive-admin-button" href="/admin-access">Manage administrators →</a>}
-   <button className="admin-signout" onClick={async()=>{await fetch("/api/admin-pin",{method:"DELETE"});location.assign("/api/auth/signout?callbackUrl=/")}}>Sign out</button>
+   <button className="admin-signout" onClick={async()=>{await fetch("/api/admin-pin",{method:"DELETE",credentials:"same-origin"});location.replace("/admin-login")}}>Sign out</button>
   </div>
 
   <div className="member-heading"><div><p className="eyebrow">TOWNSHIP ROLLERS FC</p><h1>Membership office</h1><p>{name} · <strong>{role==="executive"?"Executive Administrator":"Membership Administrator"}</strong></p></div></div>
