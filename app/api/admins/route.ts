@@ -1,6 +1,6 @@
 import { DB } from "../../../lib/platform";
 const env = { DB };
-import { getClubAdmin, hashAdminPin } from "../../admin-auth";
+import { getClubAdmin, hashAdminPin, withClubAdminContext } from "../../admin-auth";
 export const dynamic = "force-dynamic";
 const ownerEmail = "botlhelucas@gmail.com";
 const clean = (value: unknown, max = 160) => typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -13,7 +13,7 @@ export async function GET() {
   const current = await executive();
   if (!current) return fail("Executive administrator access required.", 403);
   try {
-    const rows = await env.DB.prepare("SELECT email,name,role,active,created_at AS createdAt FROM admin_users ORDER BY role,name,email").all();
+    const rows = await DB.withContext({adminRole:current.role},db=>db.prepare("SELECT email,name,role,active,created_at AS createdAt FROM admin_users ORDER BY role,name,email").all());
     return Response.json({
       current,
       administrators: [
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) return fail("Enter a valid administrator email address.");
     if (email === ownerEmail) return fail("The Executive Access Administrator account is permanent.", 409);
     if (action === "delete") {
-      const result = await env.DB.prepare("DELETE FROM admin_users WHERE email=?").bind(email).run();
+      const result = await DB.withContext({adminRole:current.role},db=>db.prepare("DELETE FROM admin_users WHERE email=?").bind(email).run());
       return result.meta.changes ? Response.json({ ok: true }) : fail("Administrator not found.", 404);
     }
     if (action !== "save") return fail("Unknown action.");
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     if (!/^\d{6}$/.test(pin)) return fail("Create a six-digit administrator PIN.");
     const now = new Date().toISOString();
     const salt=crypto.randomUUID(),pinHash=await hashAdminPin(pin,salt);
-    await env.DB.prepare("INSERT INTO admin_users (email,name,role,active,pin_salt,pin_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name,role=excluded.role,active=excluded.active,pin_salt=excluded.pin_salt,pin_hash=excluded.pin_hash,updated_at=excluded.updated_at").bind(email,name,role,active,salt,pinHash,now,now).run();
+    await DB.withContext({adminRole:current.role},db=>db.prepare("INSERT INTO admin_users (email,name,role,active,pin_salt,pin_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name,role=excluded.role,active=excluded.active,pin_salt=excluded.pin_salt,pin_hash=excluded.pin_hash,updated_at=excluded.updated_at").bind(email,name,role,active,salt,pinHash,now,now).run());
     return Response.json({ ok: true });
   } catch (error) {
     console.error(error);
