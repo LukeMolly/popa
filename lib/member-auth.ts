@@ -21,12 +21,18 @@ export async function passwordMatches(password: string, salt: string, expected: 
 }
 export function sessionTokenHash(token: string) { return createHash("sha256").update(token).digest("hex"); }
 export async function createMemberSession(memberId: string) {
-  const token = randomBytes(32).toString("base64url"), now = new Date(), expires = new Date(Date.now()+30*24*60*60*1000);
-  await DB.prepare("INSERT INTO member_sessions (token_hash,member_id,expires_at,created_at) VALUES (?,?,?,?)").bind(sessionTokenHash(token),memberId,expires.toISOString(),now.toISOString()).run();
+  const token = randomBytes(32).toString("base64url"), now = new Date(), expires = new Date(Date.now()+5*60*1000);
+  await DB.prepare("SELECT trfc_bootstrap_create_member_session(?,?,?,?)").bind(sessionTokenHash(token),memberId,expires.toISOString(),now.toISOString()).run();
   return {token,expires};
 }
 export async function getMemberSession() {
   const token=(await cookies()).get(MEMBER_SESSION_COOKIE)?.value;
   if(!token)return null;
-  return DB.prepare("SELECT m.id,m.email,m.first_name AS firstName,m.last_name AS lastName,m.password_must_change AS passwordMustChange FROM member_sessions s JOIN members m ON m.id=s.member_id WHERE s.token_hash=? AND s.expires_at>?").bind(sessionTokenHash(token),new Date().toISOString()).first<{id:string;email:string;firstName:string;lastName:string;passwordMustChange:boolean}>();
+  return DB.prepare("SELECT id,email,first_name AS firstName,last_name AS lastName,password_must_change AS passwordMustChange FROM trfc_bootstrap_member_session(?,?)").bind(sessionTokenHash(token),new Date().toISOString()).first<{id:string;email:string;firstName:string;lastName:string;passwordMustChange:boolean}>();
+}
+
+export async function withMemberContext<T>(work:(session:{id:string;email:string;firstName:string;lastName:string;passwordMustChange:boolean},db:any)=>Promise<T>){
+ const session=await getMemberSession();
+ if(!session)return null;
+ return DB.withContext({memberId:session.id},db=>work(session,db));
 }

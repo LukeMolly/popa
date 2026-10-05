@@ -1,0 +1,14 @@
+{
+  "name": "Township Rollers Membership",
+  "short_name": "Rollers",
+  "description": "Township Rollers FC membership portal",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0c244b",
+  "icons": [
+    {"src":"/township-rollers-logo.jpg","sizes":"192x192","type":"image/jpeg","purpose":"any"},
+    {"src":"/township-rollers-logo.jpg","sizes":"512x512","type":"image/jpeg","purpose":"any"}
+  ]
+}
