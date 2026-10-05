@@ -9,7 +9,7 @@ type Member={
  id:string;firstName:string;lastName:string;phone:string;email:string;status:string;expiresAt:string;token:string;createdAt:string;
  idNumber?:string;dateOfBirth?:string;placeOfBirth?:string;membershipLocation?:string;gender?:string;passwordMustChange?:boolean;
 };
-type Payment={id:string;memberId:string;amount:number;reference:string;paymentMethod?:string;paymentMethodDetail?:string;status:string;note:string;createdAt:string;reviewedAt:string;reviewedBy?:string};
+type Payment={id:string;memberId:string;amount:number;reference:string;paymentMethod?:string;paymentMethodDetail?:string;receiptName?:string;status:string;note:string;createdAt:string;reviewedAt:string;reviewedBy?:string};
 type Audit={id:string;actorEmail:string;actorName:string;actorRole:string;action:string;entityType:string;entityId:string;note:string;createdAt:string};
 type Recovery={id:string;memberId:string;email:string;status:string;requestedAt:string;resolvedAt:string;resolvedBy:string;firstName:string;lastName:string};
 type NotificationMessage={id:string;notificationId:number;senderRole:string;senderEmail:string;senderName:string;body:string;createdAt:string};
@@ -187,6 +187,13 @@ export default function MemberRegistry({adminRole}:{adminRole:string}){
 
     <div className="stats"><div><small>TOTAL MEMBERS</small><strong>{totals.total}</strong></div><div><small>ACTIVE</small><strong>{totals.active}</strong></div><div><small>PENDING</small><strong>{totals.pending}</strong></div></div>
     <div className="stats"><div><small>SUSPENDED</small><strong>{totals.suspended}</strong></div><div><small>EXPIRED</small><strong>{totals.expired}</strong></div><div><small>APPROVED REVENUE</small><strong>P{totals.revenue.toLocaleString("en-BW")}</strong><span className="muted">{totals.pendingPayments} payment(s) awaiting review</span></div></div>
+
+    {data.payments.some(p=>p.status==="submitted")&&<section className="panel" style={{borderTop:"5px solid #f6b519"}}>
+     <div className="panel-head"><div><h2>POP & receipt submissions awaiting action</h2><p>{data.payments.filter(p=>p.status==="submitted").length} payment submission(s) require membership-office review.</p></div><a className="primary" href="/office">Open payment approvals</a></div>
+     <div className="table-wrap"><table><thead><tr><th>Member</th><th>Payment method</th><th>POP channel</th><th>Status</th><th></th></tr></thead><tbody>
+      {data.payments.filter(p=>p.status==="submitted").slice(0,20).map(p=>{const m=data.members.find(x=>x.id===p.memberId);return <tr key={p.id}><td><b>{m?m.firstName+" "+m.lastName:p.memberId}</b><br/><small>{p.memberId}</small></td><td>{paymentMethodLabel(p.paymentMethod||"",p.paymentMethodDetail||"")}</td><td>{p.receiptName?"Portal upload":"WhatsApp · awaiting POP"}</td><td><Badge status="pending"/></td><td><a className="text-button" href="/office">Review →</a></td></tr>})}
+     </tbody></table></div>
+    </section>}
 
     <section className="panel" style={{borderTop:unreadNotifications?"5px solid #f6b519":undefined}}>
      <div className="panel-head"><div><h2>Member queries & notifications</h2><p>{notifications.length} conversation(s) · {unreadNotifications} unread from members</p></div></div>
