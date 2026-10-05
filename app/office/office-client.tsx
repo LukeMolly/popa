@@ -55,9 +55,9 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
      <td>{new Date(p.createdAt).toLocaleString("en-BW")}</td>
      <td><b>{paymentMethodLabel(p.paymentMethod,p.paymentMethodDetail)}</b></td>
      <td>{p.reference||"—"}</td>
-     <td><a href={"/api/staff/receipt/"+encodeURIComponent(p.id)} target="_blank" rel="noopener noreferrer">View {p.receiptName}</a></td>
+     <td>{p.receiptName?<a href={"/api/staff/receipt/"+encodeURIComponent(p.id)} target="_blank" rel="noopener noreferrer">View {p.receiptName}</a>:<div><span className="badge pending">Awaiting POP</span><br/><small>WhatsApp submission · +267 77800040</small></div>}</td>
      <td><span className={"badge "+p.status}>{p.status}</span>{p.note&&<small className="office-note">{p.note}</small>}</td>
-     <td>{p.status==="submitted"?<div className="office-actions">
+     <td>{p.status==="submitted"?<div className="office-actions">{!p.receiptName&&<small className="office-note">Verify the WhatsApp receipt before approving.</small>}
       <button disabled={busy} className="primary" onClick={()=>void save({action:"review",id:p.id,status:"approved"})}>Approve</button>
       <button disabled={busy} className="secondary" onClick={()=>{const note=window.prompt("Reason for rejection (optional)");if(note!==null)void save({action:"review",id:p.id,status:"rejected",note})}}>Reject</button>
      </div>:<span className="muted">{p.reviewedAt?"Reviewed "+new Date(p.reviewedAt).toLocaleDateString("en-BW")+(p.reviewedBy?" by "+p.reviewedBy:""):"Completed"}</span>}</td>
