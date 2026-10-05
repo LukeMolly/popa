@@ -13,7 +13,7 @@ type AdminRole="executive"|"membership";
 const defaults:Settings={membershipValidityDays:334,expiryReminderDays:7,seasonName:"2026 / 2027",seasonStartDate:"2026-09-01",seasonEndDate:"2027-07-31",membershipFee:200,registrationOpen:true};
 
 export default function Office({role,name}:{role:AdminRole;name:string}){
- const [data,setData]=useState<OfficeData>({payments:[],settings:defaults}),[paymentFilter,setPaymentFilter]=useState("all"),[error,setError]=useState(""),[notice,setNotice]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
+ const [data,setData]=useState<OfficeData>({payments:[],settings:defaults}),[paymentFilter,setPaymentFilter]=useState("submitted"),[error,setError]=useState(""),[notice,setNotice]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
 
  const load=useCallback(async()=>{try{const r=await fetch("/api/staff",{cache:"no-store"});const d=await r.json() as OfficeData&{error?:string};if(!r.ok)throw Error(d.error||"Could not load membership office");setData(d);setError("")}catch(e){setError(e instanceof Error?e.message:"Could not load membership office")}finally{setLoading(false)}},[]);
  useEffect(()=>{void load()},[load]);
@@ -28,8 +28,8 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
   }catch(e){setError(e instanceof Error?e.message:"Could not save");return false}finally{setBusy(false)}
  }
 
- const visiblePayments=paymentFilter==="all"?data.payments:data.payments.filter(p=>(p.paymentMethod||"other")===paymentFilter);
- const paymentCounts={all:data.payments.length,fnb:data.payments.filter(p=>p.paymentMethod==="fnb").length,stanbic:data.payments.filter(p=>p.paymentMethod==="stanbic").length,other:data.payments.filter(p=>!p.paymentMethod||p.paymentMethod==="other").length};
+ const visiblePayments=paymentFilter==="all"?data.payments:data.payments.filter(p=>p.status===paymentFilter);
+ const paymentCounts={all:data.payments.length,submitted:data.payments.filter(p=>p.status==="submitted").length,approved:data.payments.filter(p=>p.status==="approved").length,rejected:data.payments.filter(p=>p.status==="rejected").length};
 
  return <><AdminSessionGuard/><main className="office-page">
   <div className="office-top">
@@ -47,7 +47,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
   <section className="member-panel">
    <h2>Proof of payment · P{data.settings.membershipFee} per member</h2>
    <div style={{display:"flex",gap:8,flexWrap:"wrap",margin:"12px 0 18px"}}>
-    {[["all","All",paymentCounts.all],["fnb","FNB",paymentCounts.fnb],["stanbic","Stanbic",paymentCounts.stanbic],["other","Other",paymentCounts.other]].map(([value,label,count])=><button key={String(value)} type="button" className={paymentFilter===value?"primary":"secondary"} onClick={()=>setPaymentFilter(String(value))}>{label} ({count})</button>)}
+    {[["submitted","Awaiting action",paymentCounts.submitted],["approved","Approved",paymentCounts.approved],["rejected","Rejected",paymentCounts.rejected],["all","All",paymentCounts.all]].map(([value,label,count])=><button key={String(value)} type="button" className={paymentFilter===value?"primary":"secondary"} onClick={()=>setPaymentFilter(String(value))}>{label} ({count})</button>)}
    </div>
    <div className="table-wrap"><table><thead><tr><th>Member</th><th>Submitted</th><th>Payment method</th><th>Reference</th><th>Proof</th><th>Status</th><th>Decision</th></tr></thead><tbody>
     {visiblePayments.map(p=><tr key={p.id}>
@@ -62,7 +62,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
       <button disabled={busy} className="secondary" onClick={()=>{const note=window.prompt("Reason for rejection (optional)");if(note!==null)void save({action:"review",id:p.id,status:"rejected",note})}}>Reject</button>
      </div>:<span className="muted">{p.reviewedAt?"Reviewed "+new Date(p.reviewedAt).toLocaleDateString("en-BW")+(p.reviewedBy?" by "+p.reviewedBy:""):"Completed"}</span>}</td>
     </tr>)}
-   </tbody></table>{!visiblePayments.length&&<p className="muted">No payment submissions in this payment category.</p>}</div>
+   </tbody></table>{!visiblePayments.length&&<p className="muted">No payment submissions with this status.</p>}</div>
   </section>
 
   <section className="member-panel">
