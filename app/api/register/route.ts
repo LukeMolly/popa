@@ -40,6 +40,7 @@ export async function POST(request:Request){
   const confirmPassword=String(form.get("confirmPassword")||"");
   const paymentMethod=String(form.get("paymentMethod")||"").trim().toLowerCase();
   const paymentMethodDetail=String(form.get("paymentMethodDetail")||"").trim().slice(0,120);
+  const popSubmission=String(form.get("popSubmission")||"internal").trim().toLowerCase();
 
   if(fullName.length<3||fullName.length>160||!fullName.includes(" "))return fail("Enter your first name and surname.");
   if(!idPattern.test(idNumber))return fail("Enter a valid Omang or passport number.");
@@ -57,6 +58,7 @@ export async function POST(request:Request){
   if(password!==confirmPassword)return fail("Passwords do not match.");
   if(!PAYMENT_METHOD_CODES.includes(paymentMethod as any))return fail("Choose FNB, Stanbic Bank or another payment method.");
   if(paymentMethod==="other"&&!paymentMethodDetail)return fail("Describe the other payment method used.");
+  if(!["internal","whatsapp"].includes(popSubmission))return fail("Choose internal portal upload or WhatsApp for POP submission.");
 
   const duplicate=await env.DB.prepare("SELECT id,email,phone,id_number AS idNumber FROM trfc_bootstrap_registration_duplicate(?,?,?)").bind(email,phone||"",idNumber).first() as {id:string;email:string;phone:string;idNumber:string}|null;
   if(duplicate){
@@ -67,6 +69,7 @@ export async function POST(request:Request){
 
   const proof=form.get("proof");
   const hasProof=proof instanceof File&&proof.size>0;
+  if(popSubmission==="internal"&&!hasProof)return fail("Please upload proof of payment.");
   if(hasProof&&proof.size>5*1024*1024)return fail("Proof of payment must be 5 MB or smaller.");
   if(hasProof&&!["application/pdf","image/jpeg","image/png"].includes(proof.type))return fail("Upload a PDF, JPG or PNG file.");
 
@@ -82,7 +85,7 @@ export async function POST(request:Request){
   const paymentId=crypto.randomUUID();
 
   await env.DB.prepare("SELECT trfc_bootstrap_register_member(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-   .bind(id,firstName,lastName,phone||"",email,expiresAt,token,createdAt.toISOString(),idNumber,dob,placeOfBirth,membershipLocation,gender,passwordRecord.salt,passwordRecord.hash,paymentId,settings.membershipFee,receiptUrl,proofName,proofType,String(form.get("reference")||"").trim().slice(0,100),paymentMethod,paymentMethodDetail).run();
+   .bind(id,firstName,lastName,phone||"",email,expiresAt,token,createdAt.toISOString(),idNumber,dob,placeOfBirth,membershipLocation,gender,passwordRecord.salt,passwordRecord.hash,paymentId,settings.membershipFee,receiptUrl,proofName,proofType,String(form.get("reference")||"").trim().slice(0,100),paymentMethod,paymentMethodDetail+(popSubmission==="whatsapp"?" · POP via WhatsApp":" · POP via internal portal")).run();
 
   registrationSaved=true;
   // Registration is complete once the member and payment records are stored.
@@ -95,7 +98,7 @@ export async function POST(request:Request){
    createMemberNotification({
     memberId:id,
     title:"Registration received",
-    body:hasProof?"Your Township Rollers membership application has been received. Your payment proof is awaiting review by the membership office.":"Your Township Rollers membership application has been received. Please submit your payment proof via WhatsApp to +267 77800040.",
+    body:popSubmission==="internal"&&hasProof?"Your Township Rollers membership application has been received. Your payment proof is awaiting review by the membership office.":"Your Township Rollers membership application has been received. Please submit your payment proof via WhatsApp to +267 77800040.",
     category:"membership_status",
     createdByRole:"system",
     actionRequired:false,
