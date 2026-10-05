@@ -66,19 +66,23 @@ export async function POST(request:Request){
   }
 
   const proof=form.get("proof");
-  if(!(proof instanceof File)||proof.size===0)return fail("Please upload proof of payment.");
-  if(proof.size>5*1024*1024)return fail("Proof of payment must be 5 MB or smaller.");
-  if(!["application/pdf","image/jpeg","image/png"].includes(proof.type))return fail("Upload a PDF, JPG or PNG file.");
+  const hasProof=proof instanceof File&&proof.size>0;
+  if(hasProof&&proof.size>5*1024*1024)return fail("Proof of payment must be 5 MB or smaller.");
+  if(hasProof&&!["application/pdf","image/jpeg","image/png"].includes(proof.type))return fail("Upload a PDF, JPG or PNG file.");
 
   const passwordRecord=await newPasswordRecord(password);
   const parts=fullName.split(" "),firstName=parts.shift()||fullName,lastName=parts.join(" ")||"—";
   const id="TRFC-"+crypto.randomUUID().slice(0,8).toUpperCase(),token=crypto.randomUUID(),createdAt=new Date(),expiresAt=calculateMembershipExpiry(settings,createdAt);
-  const receiptKey="payment-proofs/"+paymentMethod+"/"+id+"/"+proof.name.replace(/[^a-zA-Z0-9._-]/g,"_");
-  receiptUrl=await uploadReceipt(receiptKey,await proof.arrayBuffer(),proof.type);
+  let proofName="",proofType="";
+  if(hasProof){
+   proofName=proof.name.slice(0,200);proofType=proof.type;
+   const receiptKey="payment-proofs/"+paymentMethod+"/"+id+"/"+proof.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+   receiptUrl=await uploadReceipt(receiptKey,await proof.arrayBuffer(),proof.type);
+  }
   const paymentId=crypto.randomUUID();
 
   await env.DB.prepare("SELECT trfc_bootstrap_register_member(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-   .bind(id,firstName,lastName,phone||"",email,expiresAt,token,createdAt.toISOString(),idNumber,dob,placeOfBirth,membershipLocation,gender,passwordRecord.salt,passwordRecord.hash,paymentId,settings.membershipFee,receiptUrl,proof.name.slice(0,200),proof.type,String(form.get("reference")||"").trim().slice(0,100),paymentMethod,paymentMethodDetail).run();
+   .bind(id,firstName,lastName,phone||"",email,expiresAt,token,createdAt.toISOString(),idNumber,dob,placeOfBirth,membershipLocation,gender,passwordRecord.salt,passwordRecord.hash,paymentId,settings.membershipFee,receiptUrl,proofName,proofType,String(form.get("reference")||"").trim().slice(0,100),paymentMethod,paymentMethodDetail).run();
 
   registrationSaved=true;
   // Registration is complete once the member and payment records are stored.
@@ -91,7 +95,7 @@ export async function POST(request:Request){
    createMemberNotification({
     memberId:id,
     title:"Registration received",
-    body:"Your Township Rollers membership application has been received. Your payment proof is awaiting review by the membership office.",
+    body:hasProof?"Your Township Rollers membership application has been received. Your payment proof is awaiting review by the membership office.":"Your Township Rollers membership application has been received. Please submit your payment proof via WhatsApp to +267 77800040.",
     category:"membership_status",
     createdByRole:"system",
     actionRequired:false,
