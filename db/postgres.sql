@@ -129,3 +129,26 @@ CREATE TABLE IF NOT EXISTS phone_otp_codes (
  created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_phone_otp_phone_created ON phone_otp_codes (phone, created_at);
+
+-- Security hardening: block direct PostgREST access unless an explicit RLS policy is added.
+ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.promos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.updates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fixtures ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.standings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.club_updates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.member_notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.member_notification_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.club_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.email_verification_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.email_delivery_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.password_recovery_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_login_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.member_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.member_login_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.phone_otp_codes ENABLE ROW LEVEL SECURITY;
