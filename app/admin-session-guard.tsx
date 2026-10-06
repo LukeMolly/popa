@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 const ADMIN_IDLE_MS = 3 * 60 * 1000;
 
 export default function AdminSessionGuard() {
   const timer = useRef<number | null>(null);
+  const pathname = usePathname();
+  const previousPath = useRef(pathname);
   const signingOut = useRef(false);
 
   useEffect(() => {
@@ -30,6 +33,12 @@ export default function AdminSessionGuard() {
       timer.current = window.setTimeout(() => void signOut(), ADMIN_IDLE_MS);
     };
 
+    if (previousPath.current !== pathname) {
+      previousPath.current = pathname;
+      void signOut();
+      return;
+    }
+
     const leaveAdmin = () => {
       if (document.visibilityState === "hidden") void signOut();
     };
@@ -44,7 +53,7 @@ export default function AdminSessionGuard() {
       events.forEach((event) => window.removeEventListener(event, resetIdle));
       document.removeEventListener("visibilitychange", leaveAdmin);
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }
