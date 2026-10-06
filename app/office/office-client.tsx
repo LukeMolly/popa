@@ -30,6 +30,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
 
  const visiblePayments=paymentFilter==="all"?data.payments:data.payments.filter(p=>p.status===paymentFilter);
  const paymentCounts={all:data.payments.length,submitted:data.payments.filter(p=>p.status==="submitted").length,approved:data.payments.filter(p=>p.status==="approved").length,rejected:data.payments.filter(p=>p.status==="rejected").length};
+ const paymentTotals={all:data.payments.reduce((sum,p)=>sum+Number(p.amount||0),0),submitted:data.payments.filter(p=>p.status==="submitted").reduce((sum,p)=>sum+Number(p.amount||0),0),approved:data.payments.filter(p=>p.status==="approved").reduce((sum,p)=>sum+Number(p.amount||0),0)};
 
  return <><AdminSessionGuard/><main className="office-page">
   <div className="office-top">
@@ -46,8 +47,9 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
 
   <section className="member-panel">
    <h2>Proof of payment · P{data.settings.membershipFee} per member</h2>
+   <div className="stats" style={{margin:"12px 0 18px"}}><div><small>TOTAL PAYMENTS</small><strong>P{paymentTotals.all.toLocaleString("en-BW")}</strong><span>{paymentCounts.all} payments</span></div><div><small>PENDING / AWAITING APPROVAL</small><strong>P{paymentTotals.submitted.toLocaleString("en-BW")}</strong><span>{paymentCounts.submitted} payments</span></div><div><small>APPROVED PAYMENTS</small><strong>P{paymentTotals.approved.toLocaleString("en-BW")}</strong><span>{paymentCounts.approved} payments</span></div></div>
    <div style={{display:"flex",gap:8,flexWrap:"wrap",margin:"12px 0 18px"}}>
-    {[["submitted","Awaiting action",paymentCounts.submitted],["approved","Approved",paymentCounts.approved],["rejected","Rejected",paymentCounts.rejected],["all","All",paymentCounts.all]].map(([value,label,count])=><button key={String(value)} type="button" className={paymentFilter===value?"primary":"secondary"} onClick={()=>setPaymentFilter(String(value))}>{label} ({count})</button>)}
+    {[["submitted","Pending / awaiting approval",paymentCounts.submitted],["approved","Approved",paymentCounts.approved],["rejected","Rejected",paymentCounts.rejected],["all","All",paymentCounts.all]].map(([value,label,count])=><button key={String(value)} type="button" className={paymentFilter===value?"primary":"secondary"} onClick={()=>setPaymentFilter(String(value))}>{label} ({count})</button>)}
    </div>
    <div className="table-wrap"><table><thead><tr><th>Member</th><th>Submitted</th><th>Payment method</th><th>Reference</th><th>Proof</th><th>Status</th><th>Decision</th></tr></thead><tbody>
     {visiblePayments.map(p=><tr key={p.id}>
