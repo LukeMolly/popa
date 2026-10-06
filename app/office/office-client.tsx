@@ -31,6 +31,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
  const visiblePayments=paymentFilter==="all"?data.payments:data.payments.filter(p=>p.status===paymentFilter);
  const paymentCounts={all:data.payments.length,submitted:data.payments.filter(p=>p.status==="submitted").length,approved:data.payments.filter(p=>p.status==="approved").length,rejected:data.payments.filter(p=>p.status==="rejected").length};
  const paymentTotals={all:data.payments.reduce((sum,p)=>sum+Number(p.amount||0),0),submitted:data.payments.filter(p=>p.status==="submitted").reduce((sum,p)=>sum+Number(p.amount||0),0),approved:data.payments.filter(p=>p.status==="approved").reduce((sum,p)=>sum+Number(p.amount||0),0)};
+ const bankTotals=Array.from(data.payments.reduce((map,p)=>{const bank=paymentMethodLabel(p.paymentMethod,p.paymentMethodDetail)||"Unspecified";const current=map.get(bank)||{bank,count:0,amount:0};current.count+=1;current.amount+=Number(p.amount||0);map.set(bank,current);return map},new Map<string,{bank:string;count:number;amount:number}>()).values()).sort((a,b)=>b.amount-a.amount);
 
  return <><AdminSessionGuard/><main className="office-page">
   <div className="office-top">
@@ -51,6 +52,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
    <div style={{display:"flex",gap:8,flexWrap:"wrap",margin:"12px 0 18px"}}>
     {[["submitted","Pending / awaiting approval",paymentCounts.submitted],["approved","Approved",paymentCounts.approved],["rejected","Rejected",paymentCounts.rejected],["all","All",paymentCounts.all]].map(([value,label,count])=><button key={String(value)} type="button" className={paymentFilter===value?"primary":"secondary"} onClick={()=>setPaymentFilter(String(value))}>{label} ({count})</button>)}
    </div>
+   <div className="table-wrap" style={{marginBottom:18}}><table><thead><tr><th>Payment bank / method</th><th>Payments</th><th>Total</th></tr></thead><tbody>{bankTotals.map(b=><tr key={b.bank}><td><b>{b.bank}</b></td><td>{b.count}</td><td>P{b.amount.toLocaleString("en-BW")}</td></tr>)}</tbody></table></div>
    <div className="table-wrap"><table><thead><tr><th>Member</th><th>Submitted</th><th>Payment method</th><th>Reference</th><th>Proof</th><th>Status</th><th>Decision</th></tr></thead><tbody>
     {visiblePayments.map(p=><tr key={p.id}>
      <td><b>{p.firstName} {p.lastName}</b><br/><small>{p.memberId}</small></td>
