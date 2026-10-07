@@ -152,3 +152,37 @@ ALTER TABLE public.admin_login_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.member_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.member_login_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.phone_otp_codes ENABLE ROW LEVEL SECURITY;
+
+-- Security hardening: privileged helper functions are server-only.
+-- The Vercel PostgreSQL connection keeps owner/server execution rights;
+-- Supabase PostgREST roles must not invoke these SECURITY DEFINER functions.
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_admin_attempt(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_admin_login(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_admin_session(text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_clear_admin_attempt(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_clear_member_attempt(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_create_admin_session(text,text,text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_create_member_session(text,text,text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_delete_admin_session(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_delete_admin_sessions(text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_delete_member_session(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_member_attempt(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_member_login(text,boolean) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_member_session(text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_phone_otp_count(text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_phone_otp_create(text,text,text,text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_phone_otp_latest(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_phone_otp_use(text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_recovery_create(text,text,text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_recovery_member(text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_recovery_recent(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_register_member(text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,numeric,text,text,text,text,text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_registration_duplicate(text,text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_set_admin_attempt(text,integer,text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_bootstrap_set_member_attempt(text,integer,text,text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trfc_system_expire_due_memberships(text) FROM anon, authenticated;
+
+-- Pin helper lookup paths so SECURITY DEFINER/RLS helpers cannot resolve attacker-controlled objects.
+ALTER FUNCTION public.trfc_admin_role() SET search_path = pg_catalog, public;
+ALTER FUNCTION public.trfc_is_admin() SET search_path = pg_catalog, public;
+ALTER FUNCTION public.trfc_member_id() SET search_path = pg_catalog, public;
