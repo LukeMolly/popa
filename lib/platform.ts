@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { Pool, PoolClient } from "pg";
-import { del, put } from "@vercel/blob";
+import { del, get, put } from "@vercel/blob";
 
 type QueryResult = { rows: Record<string, unknown>[]; rowCount?: number };
 export type DatabaseContext = { memberId?: string | null; adminRole?: string | null };
@@ -87,4 +87,10 @@ export async function uploadReceipt(pathname: string, body: ArrayBuffer, content
   return blob.url;
 }
 export async function deleteReceipt(url: string) { await del(url); }
-export async function readReceipt(url: string) { return fetch(url, { cache: "no-store" }); }
+export async function readReceipt(url: string) {
+  const object = await get(url, { access: "private" });
+  if (object?.statusCode !== 200 || !object.stream) return new Response("Receipt not found.", { status: 404 });
+  return new Response(object.stream, {
+    headers: { "Content-Type": object.blob.contentType || "application/octet-stream" },
+  });
+}

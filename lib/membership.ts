@@ -13,8 +13,8 @@ export type MembershipSettings={
  registrationOpen:boolean;
 };
 
-export async function getMembershipSettings():Promise<MembershipSettings>{
- const row=await DB.prepare("SELECT membership_validity_days AS membershipValidityDays,expiry_reminder_days AS expiryReminderDays,season_name AS seasonName,season_start_date AS seasonStartDate,season_end_date AS seasonEndDate,membership_fee AS membershipFee,registration_open AS registrationOpen FROM club_settings WHERE id=1").first() as Partial<MembershipSettings>|null;
+export async function getMembershipSettings(db:Pick<typeof DB,"prepare">=DB):Promise<MembershipSettings>{
+ const row=await db.prepare("SELECT membership_validity_days AS membershipValidityDays,expiry_reminder_days AS expiryReminderDays,season_name AS seasonName,season_start_date AS seasonStartDate,season_end_date AS seasonEndDate,membership_fee AS membershipFee,registration_open AS registrationOpen FROM club_settings WHERE id=1").first() as Partial<MembershipSettings>|null;
  return {
   membershipValidityDays:Number(row?.membershipValidityDays||334),
   expiryReminderDays:Number(row?.expiryReminderDays||7),

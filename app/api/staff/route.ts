@@ -14,11 +14,12 @@ export async function GET(){
  const admin=await getClubAdmin();
  if(!admin||!["executive","membership"].includes(admin.role))return error("Membership administrator access required.",403);
  try{
-  await expireDueMemberships();
-  const [payments,settings]=await Promise.all([
-   env.DB.prepare("SELECT p.id,p.member_id AS memberId,m.first_name AS firstName,m.last_name AS lastName,p.amount,p.reference,p.receipt_name AS receiptName,p.payment_method AS paymentMethod,p.payment_method_detail AS paymentMethodDetail,p.status,p.note,p.created_at AS createdAt,p.reviewed_at AS reviewedAt,p.reviewed_by AS reviewedBy FROM payments p JOIN members m ON m.id=p.member_id ORDER BY p.created_at DESC").all(),
-   getMembershipSettings(),
-  ]);
+  // An expiry notification failure must not hide payment records or their totals.
+  try{await expireDueMemberships()}catch(e){console.error("Membership expiry check failed",e)}
+  const [payments,settings]=await DB.withContext({adminRole:admin.role},db=>Promise.all([
+   db.prepare("SELECT p.id,p.member_id AS memberId,m.first_name AS firstName,m.last_name AS lastName,p.amount,p.reference,p.receipt_name AS receiptName,p.receipt_type AS receiptType,p.payment_method AS paymentMethod,p.payment_method_detail AS paymentMethodDetail,p.status,p.note,p.created_at AS createdAt,p.reviewed_at AS reviewedAt,p.reviewed_by AS reviewedBy FROM payments p JOIN members m ON m.id=p.member_id ORDER BY p.created_at DESC").all(),
+   getMembershipSettings(db),
+  ]));
   return Response.json({payments:payments.results,settings},{headers:{"Cache-Control":"no-store"}});
  }catch(e){console.error(e);return error("Membership office data unavailable.",500)}
 }

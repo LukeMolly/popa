@@ -1,11 +1,11 @@
 "use client";
 import AdminSessionGuard from "../admin-session-guard";
-import {useCallback,useEffect,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import { paymentMethodLabel } from "../../lib/payment-methods";
 
 type Payment={
- id:string;memberId:string;firstName:string;lastName:string;amount:number;reference:string;receiptName:string;paymentMethod:string;paymentMethodDetail:string;status:string;note:string;createdAt:string;reviewedAt:string;reviewedBy:string;
+ id:string;memberId:string;firstName:string;lastName:string;amount:number;reference:string;receiptName:string;receiptType:string;paymentMethod:string;paymentMethodDetail:string;status:string;note:string;createdAt:string;reviewedAt:string;reviewedBy:string;
 };
 type Settings={membershipValidityDays:number;expiryReminderDays:number;seasonName:string;seasonStartDate:string;seasonEndDate:string;membershipFee:number;registrationOpen:boolean};
 type OfficeData={payments:Payment[];settings:Settings};
@@ -13,10 +13,17 @@ type AdminRole="executive"|"membership";
 const defaults:Settings={membershipValidityDays:334,expiryReminderDays:7,seasonName:"2026 / 2027",seasonStartDate:"2026-09-01",seasonEndDate:"2027-07-31",membershipFee:200,registrationOpen:true};
 
 export default function Office({role,name}:{role:AdminRole;name:string}){
- const [data,setData]=useState<OfficeData>({payments:[],settings:defaults}),[paymentFilter,setPaymentFilter]=useState("submitted"),[error,setError]=useState(""),[notice,setNotice]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
+ const [data,setData]=useState<OfficeData|null>(null),[paymentFilter,setPaymentFilter]=useState("submitted"),[error,setError]=useState(""),[notice,setNotice]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
+ const [selectedReceipt,setSelectedReceipt]=useState<Payment|null>(null);
+ const receiptDialog=useRef<HTMLDialogElement>(null);
 
- const load=useCallback(async()=>{try{const r=await fetch("/api/staff",{cache:"no-store"});const d=await r.json() as OfficeData&{error?:string};if(!r.ok)throw Error(d.error||"Could not load membership office");setData(d);setError("")}catch(e){setError(e instanceof Error?e.message:"Could not load membership office")}finally{setLoading(false)}},[]);
+ const load=useCallback(()=>fetch("/api/staff",{cache:"no-store"}).then(async r=>{
+  const d=await r.json() as OfficeData&{error?:string};
+  if(!r.ok||!Array.isArray(d.payments))throw Error(d.error||"Could not load membership office");
+  setData({...d,settings:d.settings||defaults});setError("");
+ }).catch(e=>{setData(null);setError(e instanceof Error?e.message:"Could not load membership office")}).finally(()=>setLoading(false)),[]);
  useEffect(()=>{void load()},[load]);
+ useEffect(()=>{if(selectedReceipt&&receiptDialog.current&&!receiptDialog.current.open)receiptDialog.current.showModal()},[selectedReceipt]);
 
  async function save(payload:Record<string,unknown>){
   setBusy(true);setError("");setNotice("");
@@ -24,14 +31,15 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
    const r=await fetch("/api/staff",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
    const d=await r.json() as {error?:string};
    if(!r.ok)throw Error(d.error||"Could not save");
-   setNotice("Saved successfully.");await load();return true;
+   setNotice("Saved successfully.");setLoading(true);await load();return true;
   }catch(e){setError(e instanceof Error?e.message:"Could not save");return false}finally{setBusy(false)}
  }
 
- const visiblePayments=paymentFilter==="all"?data.payments:data.payments.filter(p=>p.status===paymentFilter);
- const paymentCounts={all:data.payments.length,submitted:data.payments.filter(p=>p.status==="submitted").length,approved:data.payments.filter(p=>p.status==="approved").length,rejected:data.payments.filter(p=>p.status==="rejected").length};
- const paymentTotals={all:data.payments.reduce((sum,p)=>sum+Number(p.amount||0),0),submitted:data.payments.filter(p=>p.status==="submitted").reduce((sum,p)=>sum+Number(p.amount||0),0),approved:data.payments.filter(p=>p.status==="approved").reduce((sum,p)=>sum+Number(p.amount||0),0)};
- const bankTotals=Array.from(data.payments.reduce((map,p)=>{const bank=paymentMethodLabel(p.paymentMethod,p.paymentMethodDetail)||"Unspecified";const current=map.get(bank)||{bank,count:0,amount:0};current.count+=1;current.amount+=Number(p.amount||0);map.set(bank,current);return map},new Map<string,{bank:string;count:number;amount:number}>()).values()).sort((a,b)=>b.amount-a.amount);
+ const payments=data?.payments||[];
+ const visiblePayments=paymentFilter==="all"?payments:payments.filter(p=>p.status===paymentFilter);
+ const paymentCounts={all:payments.length,submitted:payments.filter(p=>p.status==="submitted").length,approved:payments.filter(p=>p.status==="approved").length,rejected:payments.filter(p=>p.status==="rejected").length};
+ const paymentTotals={all:payments.reduce((sum,p)=>sum+Number(p.amount||0),0),submitted:payments.filter(p=>p.status==="submitted").reduce((sum,p)=>sum+Number(p.amount||0),0),approved:payments.filter(p=>p.status==="approved").reduce((sum,p)=>sum+Number(p.amount||0),0)};
+ const bankTotals=Array.from(payments.reduce((map,p)=>{const bank=paymentMethodLabel(p.paymentMethod,p.paymentMethodDetail)||"Unspecified";const current=map.get(bank)||{bank,count:0,amount:0};current.count+=1;current.amount+=Number(p.amount||0);map.set(bank,current);return map},new Map<string,{bank:string;count:number;amount:number}>()).values()).sort((a,b)=>b.amount-a.amount);
 
  return <><AdminSessionGuard/><main className="office-page">
   <div className="office-top">
@@ -45,7 +53,9 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
   {loading&&<p>Loading membership office…</p>}
   {error&&<p role="alert" className="form-error">{error}</p>}
   {notice&&<p role="status" className="form-success">{notice}</p>}
+  <button type="button" className="secondary" disabled={loading||busy} onClick={()=>{setLoading(true);setError("");void load()}}>Refresh payments</button>
 
+  {data&&<>
   <section className="member-panel">
    <h2>Proof of payment · P{data.settings.membershipFee} per member</h2>
    <div className="stats" style={{margin:"12px 0 18px"}}><div><small>TOTAL PAYMENTS</small><strong>P{paymentTotals.all.toLocaleString("en-BW")}</strong><span>{paymentCounts.all} payments</span></div><div><small>PENDING / AWAITING APPROVAL</small><strong>P{paymentTotals.submitted.toLocaleString("en-BW")}</strong><span>{paymentCounts.submitted} payments</span></div><div><small>APPROVED PAYMENTS</small><strong>P{paymentTotals.approved.toLocaleString("en-BW")}</strong><span>{paymentCounts.approved} payments</span></div></div>
@@ -53,13 +63,14 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
     {[["submitted","Pending / awaiting approval",paymentCounts.submitted],["approved","Approved",paymentCounts.approved],["rejected","Rejected",paymentCounts.rejected],["all","All",paymentCounts.all]].map(([value,label,count])=><button key={String(value)} type="button" className={paymentFilter===value?"primary":"secondary"} onClick={()=>setPaymentFilter(String(value))}>{label} ({count})</button>)}
    </div>
    <div className="table-wrap" style={{marginBottom:18}}><table><thead><tr><th>Payment bank / method</th><th>Payments</th><th>Total</th></tr></thead><tbody>{bankTotals.map(b=><tr key={b.bank}><td><b>{b.bank}</b></td><td>{b.count}</td><td>P{b.amount.toLocaleString("en-BW")}</td></tr>)}</tbody></table></div>
-   <div className="table-wrap"><table><thead><tr><th>Member</th><th>Submitted</th><th>Payment method</th><th>Reference</th><th>Proof</th><th>Status</th><th>Decision</th></tr></thead><tbody>
+   <div className="table-wrap"><table><thead><tr><th>Member</th><th>Submitted</th><th>Amount</th><th>Payment method</th><th>Reference</th><th>Proof</th><th>Status</th><th>Decision</th></tr></thead><tbody>
     {visiblePayments.map(p=><tr key={p.id}>
      <td><b>{p.firstName} {p.lastName}</b><br/><small>{p.memberId}</small></td>
      <td>{new Date(p.createdAt).toLocaleString("en-BW")}</td>
+     <td>P{Number(p.amount||0).toLocaleString("en-BW")}</td>
      <td><b>{paymentMethodLabel(p.paymentMethod,p.paymentMethodDetail)}</b></td>
      <td>{p.reference||"—"}</td>
-     <td>{p.receiptName?<a href={"/api/staff/receipt/"+encodeURIComponent(p.id)} target="_blank" rel="noopener noreferrer">View {p.receiptName}</a>:<div><span className="badge pending">Awaiting POP</span><br/><small>WhatsApp submission · +267 77800040</small></div>}</td>
+     <td>{p.receiptName?<button type="button" className="text-button" onClick={()=>setSelectedReceipt(p)}>View {p.receiptName}</button>:<div><span className="badge pending">Awaiting POP</span><br/><small>WhatsApp submission · +267 77800040</small></div>}</td>
      <td><span className={"badge "+p.status}>{p.status}</span>{p.note&&<small className="office-note">{p.note}</small>}</td>
      <td>{p.status==="submitted"?<div className="office-actions">{!p.receiptName&&<small className="office-note">Verify the WhatsApp receipt before approving.</small>}
       <button disabled={busy} className="primary" onClick={()=>void save({action:"review",id:p.id,status:"approved"})}>Approve</button>
@@ -97,5 +108,10 @@ export default function Office({role,name}:{role:AdminRole;name:string}){
    </form>
    <p className="muted">Approved payments activate membership to the configured season end date. After a season has ended, the fallback validity period is used until new season dates are configured.</p>
   </section>
+  </>}
+  {selectedReceipt&&<dialog ref={receiptDialog} aria-labelledby="payment-proof-title" onClose={()=>setSelectedReceipt(null)} style={{width:"min(900px, 94vw)",maxHeight:"90vh",padding:20,border:"1px solid #d8dee8",borderRadius:12}}>
+   <div style={{display:"flex",justifyContent:"space-between",gap:16,alignItems:"center",marginBottom:12}}><div><h2 id="payment-proof-title">Proof of payment</h2><p style={{overflowWrap:"anywhere"}}>{selectedReceipt.receiptName}</p></div><button type="button" className="secondary" onClick={()=>receiptDialog.current?.close()}>Close</button></div>
+   {selectedReceipt.receiptType?.startsWith("image/")?<img src={"/api/staff/receipt/"+encodeURIComponent(selectedReceipt.id)} alt={"Proof of payment for "+selectedReceipt.memberId} style={{display:"block",maxWidth:"100%",maxHeight:"70vh",margin:"auto",objectFit:"contain"}}/>:<iframe title={"Proof of payment for "+selectedReceipt.memberId} src={"/api/staff/receipt/"+encodeURIComponent(selectedReceipt.id)} style={{width:"100%",height:"65vh",border:0}}/>}
+  </dialog>}
  </main></>;
 }
