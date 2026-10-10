@@ -14,6 +14,27 @@ const when=(date:string)=>new Date(date).toLocaleString("en-BW",{dateStyle:"medi
 export default function MemberPortal({params}:{params:Promise<{token:string}>}){
  const [token,setToken]=useState(""),[member,setMember]=useState<Member|null>(null),[payment,setPayment]=useState<Payment>(null),[settings,setSettings]=useState<Settings>({seasonName:"Membership",membershipFee:200,expiryReminderDays:7}),[notifications,setNotifications]=useState<MemberNotification[]>([]),[paymentMethod,setPaymentMethod]=useState(""),[paymentMethodDetail,setPaymentMethodDetail]=useState(""),[qr,setQr]=useState(""),[error,setError]=useState(""),[success,setSuccess]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[notificationsLoading,setNotificationsLoading]=useState(false),[otp,setOtp]=useState(""),[otpSent,setOtpSent]=useState(false),[verifyBusy,setVerifyBusy]=useState(false);
  useEffect(()=>{params.then(({token})=>setToken(token))},[params]);
+ // Synchronize the visible member portal with the server-side session.
+ // The existing five-minute expiry remains unchanged.
+ useEffect(()=>{
+  let active=true;
+  const checkSession=async()=>{
+   try{
+    const response=await fetch("/api/member-session",{method:"GET",cache:"no-store"});
+    if(active&&response.status===401){
+     window.location.replace("/member-login?reason=session-expired");
+    }
+   }catch{
+    // Network errors are not proof that the session has expired.
+   }
+  };
+  void checkSession();
+  const timer=window.setInterval(()=>void checkSession(),10000);
+  const onVisible=()=>{if(document.visibilityState==="visible")void checkSession()};
+  document.addEventListener("visibilitychange",onVisible);
+  return()=>{active=false;window.clearInterval(timer);document.removeEventListener("visibilitychange",onVisible)};
+ },[]);
+
  useEffect(()=>{
   if(!token)return;
   fetch("/api/member/"+encodeURIComponent(token),{cache:"no-store"})
