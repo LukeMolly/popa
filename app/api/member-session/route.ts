@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { DB } from "../../../lib/platform";
-import { createMemberSession, MEMBER_SESSION_COOKIE, passwordMatches, sessionTokenHash } from "../../../lib/member-auth";
+import { createMemberSession, getMemberSession, MEMBER_SESSION_COOKIE, passwordMatches, sessionTokenHash } from "../../../lib/member-auth";
 import { normalizePhone } from "../../../lib/phone-otp";
 
 const fail=(error:string,status=400)=>Response.json({error},{status});
@@ -42,6 +42,11 @@ export async function POST(request:Request){
    phoneVerificationRecommended:Boolean(phone&&!member.phoneVerifiedAt)
   }
  });
+}
+
+export async function GET(){
+ const session=await getMemberSession();
+ return Response.json({authenticated:Boolean(session)},{status:session?200:401,headers:{"Cache-Control":"no-store"}});
 }
 
 export async function DELETE(){
