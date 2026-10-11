@@ -1,3 +1,4 @@
+import {ClubLogo} from "../components/club-logo";
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
