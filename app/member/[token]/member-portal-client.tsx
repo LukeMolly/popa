@@ -1,5 +1,5 @@
-import {ClubLogo} from "../../components/club-logo";
 "use client";
+import {ClubLogo} from "../../components/club-logo";
 import {useEffect,useRef,useState} from "react";
 import QRCode from "qrcode";
 import Link from "next/link";
