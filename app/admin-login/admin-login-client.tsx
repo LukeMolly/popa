@@ -1,4 +1,5 @@
 "use client";
+import {ClubLogo} from "../components/club-logo";
 
 import { useState } from "react";
 
@@ -9,7 +10,7 @@ export default function AdminLoginClient({ returnTo }: { returnTo: string }) {
   return (
     <main className="admin-login-page">
       <section className="admin-login-card">
-        <span className="mini-crest">TR</span>
+        <ClubLogo/>
         <p className="eyebrow">TOWNSHIP ROLLERS FC</p>
         <h1>Administrator sign in</h1>
         <p>Use your authorised email and six-digit administrator PIN.</p>
