@@ -1,5 +1,5 @@
-import {ClubLogo} from "../components/club-logo";
 "use client";
+import {ClubLogo} from "../components/club-logo";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 type Payment = {
