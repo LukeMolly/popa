@@ -1,3 +1,4 @@
+import {ClubLogo} from "../../components/club-logo";
 import { DB } from "../../../lib/platform";
 const env = { DB };
 
@@ -49,5 +50,5 @@ export default async function Verify({params}:{params:Promise<{token:string}>}) 
 }
 
 function VerificationShell({children}:{children:React.ReactNode}) {
-  return <main className="verify-page"><section className="verify-box"><div className="verify-mark"><div className="crest">TR</div><span>TOWNSHIP ROLLERS FC<br/><small>MEMBERSHIP VERIFICATION</small></span></div>{children}</section></main>;
+  return <main className="verify-page"><section className="verify-box"><div className="verify-mark"><ClubLogo/><span>TOWNSHIP ROLLERS FC<br/><small>MEMBERSHIP VERIFICATION</small></span></div>{children}</section></main>;
 }
