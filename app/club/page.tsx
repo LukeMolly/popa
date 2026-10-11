@@ -1,3 +1,4 @@
+import {ClubLogo} from "../components/club-logo";
 "use client";
 import { useEffect, useState } from "react";
 import { FixtureCard } from "../components/fixture-card";
@@ -122,7 +123,7 @@ export default function ClubPage() {
   return (
     <main className="club-page">
       <header className="club-hero">
-        <span className="mini-crest">TR</span>
+        <ClubLogo/>
         <p>TOWNSHIP ROLLERS FC</p>
         <h1>Popa Popa</h1>
         <span>Fixtures, team, results and club news</span>
