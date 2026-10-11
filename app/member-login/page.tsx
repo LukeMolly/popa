@@ -1,3 +1,4 @@
+import {ClubLogo} from "../components/club-logo";
 import { DB } from "../../lib/platform";
 const env = { DB };
 import {getChatGPTUser} from "../chatgpt-auth";
@@ -27,7 +28,7 @@ export default async function MemberLoginPage() {
   return (
     <main className="member-login-page">
       <header className="member-login-header">
-        <Link href="/" className="member-login-brand"><span className="mini-crest">TR</span><span>Township Rollers F.C.</span></Link>
+        <Link href="/" className="member-login-brand"><ClubLogo/><span>Township Rollers F.C.</span></Link>
         <a href="/register">Open an account</a>
       </header>
       <section className="member-login-stage">
