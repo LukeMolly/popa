@@ -1,5 +1,5 @@
-import {ClubLogo} from "../components/club-logo";
 "use client";
+import {ClubLogo} from "../components/club-logo";
 import { useEffect, useState } from "react";
 import { FixtureCard } from "../components/fixture-card";
 
