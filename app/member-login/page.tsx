@@ -40,9 +40,9 @@ export default async function MemberLoginPage() {
           {!user ? (
             <>
               <h1>Sign in to your membership</h1>
-              <p>Use the email address and password created with your Township Rollers membership.</p>
+              <p>Use your email address or Botswana 8-digit mobile number with your 4-character PIN.</p>
               <MemberLoginClient/>
-              <div className="member-login-help"><strong>New member?</strong><span>Register first and use the same email address when signing in.</span><a href="/register">Create membership account</a></div>
+              <div className="member-login-help"><strong>New member?</strong><span>Register first, then sign in using your registered email or mobile number.</span><a href="/register">Create membership account</a></div>
             </>
           ) : linked ? (
             <>
