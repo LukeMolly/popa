@@ -16,7 +16,7 @@ export async function POST(request:Request){
   if(!["application/pdf","image/jpeg","image/png"].includes(proof.type)) return fail("Upload a PDF, JPG or PNG file.");
   const fullName=String(form.get("fullName")).trim().replace(/\s+/g," ");
   const password=String(form.get("password"));
-  if(password.length<8||!/[A-Za-z]/.test(password)||!/[0-9]/.test(password)) return fail("Use at least 8 characters with a letter and a number.");
+  if(!/^[A-Za-z0-9]{4}$/.test(password)) return fail("Use exactly 4 letters and/or digits for the PIN.");
   if(password!==String(form.get("confirmPassword")||"")) return fail("Passwords do not match.");
   const passwordRecord=await newPasswordRecord(password);
   const parts=fullName.split(" "),firstName=parts.shift()||fullName,lastName=parts.join(" ")||"—";
