@@ -8,7 +8,7 @@ export async function POST(request:Request){
   if(!member)return fail("Sign in before changing your password.",401);
   const body=await request.json().catch(()=>null) as {password?:string;confirmPassword?:string}|null;
   const password=String(body?.password||"");
-  if(password.length<8||!/[A-Za-z]/.test(password)||!/[0-9]/.test(password))return fail("Use at least 8 characters with a letter and a number.");
+  if(!/^[A-Za-z0-9]{4}$/.test(password))return fail("Use exactly 4 letters and/or digits for your PIN.");
   if(password!==String(body?.confirmPassword||""))return fail("Passwords do not match.");
   if(password.toLowerCase()==="password")return fail("Choose a private password instead of the temporary password.");
   const record=await newPasswordRecord(password);
