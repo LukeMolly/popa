@@ -32,7 +32,7 @@ export async function POST(request:Request){
    if(!["approved","rejected"].includes(status))return error("Choose approve or reject.");
    const payment=await db.prepare("SELECT member_id AS memberId,status FROM payments WHERE id=?").bind(id).first() as {memberId:string;status:string}|null;
    if(!payment||payment.status!=="submitted")return error("Payment is no longer awaiting review.",409);
-   const statements=[db.prepare("UPDATE payments SET status=?,note=?,reviewed_at=? WHERE id=? AND status='submitted'").bind(status,note,now,id)];
+   const statements=[db.prepare("UPDATE payments SET status=?,note=CASE WHEN ? = '' THEN note ELSE note || '; Review: ' || ? END,reviewed_at=? WHERE id=? AND status='submitted'").bind(status,note,note,now,id)];
    if(status==="approved"){
     const expiresAt="2027-07-31";
     statements.push(db.prepare("UPDATE members SET status='active',expires_at=? WHERE id=?").bind(expiresAt,payment.memberId));
