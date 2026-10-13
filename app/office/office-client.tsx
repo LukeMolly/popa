@@ -71,6 +71,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
     [notice, setNotice] = useState(""),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
+    [paymentFilter, setPaymentFilter] = useState("all"),
     [editingFixture, setEditingFixture] = useState<string | null>(null),
     [editingStanding, setEditingStanding] = useState<Standing | null>(null),
     [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
@@ -126,6 +127,13 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
       if (action === "player") setEditingPlayer(null);
     }
   }
+  const payments = data.payments || [];
+  const tally = (status: string) => {
+    const rows = status === "all" ? payments : payments.filter(p => p.status === status);
+    return {count: rows.length, amount: rows.reduce((sum,p)=>sum+(Number(p.amount)||0),0)};
+  };
+  const visiblePayments = paymentFilter === "all" ? payments : payments.filter(p=>p.status===paymentFilter);
+  const pula = (amount: number) => "P" + amount.toLocaleString("en-BW",{minimumFractionDigits:2,maximumFractionDigits:2});
   return (
     <main className="office-page">
       <div className="office-top">
@@ -155,12 +163,32 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
       {canMembership && <>
       <section className="member-panel">
         <h2>Proof of payment · P200 per member</h2>
+        <div className="stats" style={{margin:"12px 0 18px"}}>
+          {[
+            ["All submissions","all"],
+            ["Pending / awaiting verification","submitted"],
+            ["Approved / confirmed","approved"],
+            ["Rejected","rejected"]
+          ].map(([label,status])=><div key={status}><small>{label}</small><strong>{pula(tally(status).amount)}</strong><span>{tally(status).count} payments</span></div>)}
+        </div>
+        <p className="muted">Only approved payments count as confirmed revenue. Pending totals include registrations awaiting proof via WhatsApp.</p>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+          <label htmlFor="payment-status-filter">Payment status </label>
+          <select id="payment-status-filter" value={paymentFilter} onChange={e=>setPaymentFilter(e.target.value)}>
+            <option value="all">All submissions</option>
+            <option value="submitted">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button type="button" className="secondary" disabled={loading||busy} onClick={()=>{setLoading(true);void load()}}>Refresh tally</button>
+        </div>
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Member</th>
                 <th>Submitted</th>
+                <th>Amount</th>
                 <th>Reference</th>
                 <th>Proof</th>
                 <th>Status</th>
@@ -168,7 +196,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
               </tr>
             </thead>
             <tbody>
-              {data.payments.map((p) => (
+              {visiblePayments.map((p) => (
                 <tr key={p.id}>
                   <td>
                     <b>
@@ -178,15 +206,10 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
                     <small>{p.memberId}</small>
                   </td>
                   <td>{new Date(p.createdAt).toLocaleString("en-BW")}</td>
+                  <td>{pula(Number(p.amount)||0)}</td>
                   <td>{p.reference || "—"}</td>
                   <td>
-                    <a
-                      href={"/api/staff/receipt/" + encodeURIComponent(p.id)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View {p.receiptName}
-                    </a>
+                    {p.receiptName ? <a href={"/api/staff/receipt/" + encodeURIComponent(p.id)} target="_blank" rel="noopener noreferrer">View {p.receiptName}</a> : <span>Awaiting WhatsApp POP</span>}
                   </td>
                   <td>
                     <span className={"badge " + p.status}>{p.status}</span>
@@ -235,8 +258,8 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
               ))}
             </tbody>
           </table>
-          {!data.payments.length && (
-            <p className="muted">No payment proofs submitted yet.</p>
+          {!visiblePayments.length && (
+            <p className="muted">No payments match the selected status.</p>
           )}
         </div>
       </section>
