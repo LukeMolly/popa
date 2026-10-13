@@ -16,14 +16,15 @@ export async function GET(_request:Request,{params}:Context){
  try{
   const {token}=await params;
   if(!(await authorisedMember(token)))return Response.json({error:"Member sign-in required."},{status:403});
-  const member=await env.DB.prepare("SELECT id,first_name AS firstName,last_name AS lastName,status,expires_at AS expiresAt,token FROM members WHERE token=?").bind(token).first();
+  const member=await env.DB.prepare("SELECT id,first_name AS firstName,last_name AS lastName,phone,email,status,expires_at AS expiresAt,token FROM members WHERE token=?").bind(token).first();
   if(!member)return Response.json({error:"Member not found."},{status:404});
-  const [payment,settings,notifications]=await Promise.all([
+  const [payment,settings,notifications,promos]=await Promise.all([
    env.DB.prepare("SELECT id,amount,reference,status,note,created_at AS createdAt FROM payments WHERE member_id=? ORDER BY created_at DESC LIMIT 1").bind(member.id).first(),
    env.DB.prepare("SELECT expiry_reminder_days AS reminderDays FROM club_settings WHERE id=1").first() as Promise<{reminderDays:number}|null>,
-   env.DB.prepare("SELECT id,title,body,reply,replied_at AS repliedAt,created_at AS createdAt FROM member_notifications WHERE member_id=? ORDER BY created_at DESC LIMIT 50").bind(member.id).all()
+   env.DB.prepare("SELECT id,title,body,reply,replied_at AS repliedAt,created_at AS createdAt FROM member_notifications WHERE member_id=? ORDER BY created_at DESC LIMIT 50").bind(member.id).all(),
+   env.DB.prepare("SELECT code,campaign,status,created_at AS createdAt FROM promos WHERE member_id=? ORDER BY created_at DESC").bind(member.id).all()
   ]);
-  return Response.json({member:{...member,reminderDays:Number(settings?.reminderDays)||7},payment,notifications:notifications.results},{headers:{"Cache-Control":"no-store"}});
+  return Response.json({member:{...member,reminderDays:Number(settings?.reminderDays)||7},payment,notifications:notifications.results,promos:promos.results},{headers:{"Cache-Control":"no-store"}});
  }catch(e){console.error(e);return Response.json({error:"Membership unavailable."},{status:500})}
 }
 export async function POST(request:Request,{params}:Context){
