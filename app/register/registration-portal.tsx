@@ -6,11 +6,9 @@ import { Bell, CalendarDays, ChevronRight, CreditCard, FileCheck2, MapPin, Shiel
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type Notice = { title: string; body: string; date: string; kind: string };
-const locations = ["Gaborone", "Molepolole", "Mochudi", "Francistown", "Maun", "Palapye", "Lobatse", "Other"];
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return <label className="field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
@@ -20,7 +18,6 @@ export default function Portal({ accountEmail }: { accountEmail: string }) {
   const dobRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState("register");
   const [gender, setGender] = useState("");
-  const [location, setLocation] = useState("");
   const [fileName, setFileName] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ membershipId: string; expiresAt: string } | null>(null);
@@ -50,7 +47,7 @@ export default function Portal({ accountEmail }: { accountEmail: string }) {
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); setBusy(true); setError("");
-    const form = new FormData(e.currentTarget); form.set("gender", gender); form.set("membershipLocation", location);
+    const form = new FormData(e.currentTarget); form.set("gender", gender);
     try {
       const response = await fetch("/api/register", { method: "POST", body: form });
       const data = await response.json() as { membershipId?: string; expiresAt?: string; error?: string };
@@ -74,7 +71,7 @@ export default function Portal({ accountEmail }: { accountEmail: string }) {
             <Field label="Date of birth" hint="Select your date from the calendar"><div className="date-picker-field"><Input ref={dobRef} name="dateOfBirth" required type="date" min="1900-01-01" max={latestBirthDate} autoComplete="bday"/><button type="button" onClick={openDatePicker} aria-label="Open date of birth calendar" title="Open calendar"><CalendarDays aria-hidden="true"/></button></div></Field><Field label="Place of birth"><Input name="placeOfBirth" required placeholder="Town or village" autoComplete="address-level2"/></Field>
             <Field label="Email address"><Input name="email" required type="email" defaultValue={accountEmail} placeholder="name@example.com"/></Field><Field label="Mobile number"><Input name="phone" required type="tel" placeholder="+267 7X XXX XXX"/></Field>
             <Field label="Create 4-character PIN"><Input name="password" required type="password" minLength={4} maxLength={4} pattern="[A-Za-z0-9]{4}" autoComplete="new-password" placeholder="4 letters or digits"/></Field><Field label="Confirm PIN"><Input name="confirmPassword" required type="password" minLength={4} maxLength={4} pattern="[A-Za-z0-9]{4}" autoComplete="new-password" placeholder="Repeat PIN"/></Field>
-            <Field label="Membership location"><Select value={location} onValueChange={setLocation} required><SelectTrigger className="select-full membership-location"><SelectValue placeholder="Select branch or town"/></SelectTrigger><SelectContent className="location-menu">{locations.map(item => <SelectItem className="location-option" key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></Field>
+            <Field label="Membership location"><Input name="membershipLocation" required placeholder="Enter your branch name" maxLength={100}/></Field>
             <Field label="Gender"><RadioGroup value={gender} onValueChange={setGender} className="gender-row" required>{["Female", "Male", "Other"].map(item => <label className="radio-card" key={item}><RadioGroupItem value={item.toLowerCase()}/>{item}</label>)}</RadioGroup></Field>
           </div>
           <div className="payment-box"><div className="payment-copy"><span className="icon-tile"><CreditCard/></span><div><strong>Season registration fee</strong><p>A once-off P200 payment covers September 2026 to July 2027.</p></div><b>P200</b></div><label className="upload-zone"><UploadCloud/><span><strong>{fileName || "Upload proof of payment"}</strong><small>PDF, JPG or PNG · Maximum 5 MB</small></span><Input name="proof" required type="file" accept=".pdf,image/jpeg,image/png" onChange={e => setFileName(e.target.files?.[0]?.name || "")}/></label></div>
