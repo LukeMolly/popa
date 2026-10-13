@@ -3,3 +3,13 @@
 
 
 .site-logo{display:block;width:44px;height:44px;object-fit:contain;flex-shrink:0}
+
+
+/* Responsive interaction polish: preserve existing branding and page structure. */
+.gateway-page{overflow-x:clip}
+.gateway-brand,.gateway-signout,.gateway-footer a,.access-card>a,.access-card>small a{touch-action:manipulation}
+.gateway-brand:focus-visible,.gateway-signout:focus-visible,.gateway-footer a:focus-visible,.access-card a:focus-visible{outline:3px solid #f6b519;outline-offset:3px}
+.access-card>a{transition:filter .16s ease,transform .16s ease}
+@media(hover:hover){.access-card>a:hover{filter:brightness(.96);transform:translateY(-1px)}}
+@media(max-width:520px){.gateway-header{min-height:76px;height:auto;padding-block:12px;gap:12px}.gateway-brand{min-width:0}.gateway-brand>span:last-child{min-width:0}.gateway-brand strong{overflow-wrap:anywhere}.gateway-hero{height:clamp(310px,90vw,410px)}.gateway-copy{left:18px;right:18px;top:40px}.gateway-copy h1{font-size:clamp(2rem,9vw,2.7rem);overflow-wrap:break-word}.gateway-intro h2{font-size:clamp(24px,7vw,32px)}.access-card{min-height:0;padding:22px}.access-card h3{font-size:clamp(20px,6vw,26px);padding-right:28px}.gateway-footer a,.gateway-signout,.access-card>small a{display:inline-flex;align-items:center;min-height:44px}.access-card>a{min-height:52px}.gateway-actions{padding-bottom:calc(45px + env(safe-area-inset-bottom))}}
+@media(prefers-reduced-motion:reduce){.access-card>a{transition:none}}
