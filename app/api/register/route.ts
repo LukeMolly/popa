@@ -1,5 +1,6 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../lib/platform";
 import { newPasswordRecord } from "../../../lib/member-auth";
+import { PAYMENT_METHOD_CODES, paymentMethodLabel } from "../../../lib/payment-methods";
 const env = { DB };
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,10 @@ export async function POST(request:Request){
  try{
   const form=await request.formData();
   for(const key of fields) if(!String(form.get(key)||"").trim()) return fail(`Missing ${key}.`);
+  const paymentMethod=String(form.get("paymentMethod")||"").trim().toLowerCase();
+  const paymentMethodDetail=String(form.get("paymentMethodDetail")||"").trim().slice(0,120);
+  if(!PAYMENT_METHOD_CODES.includes(paymentMethod as (typeof PAYMENT_METHOD_CODES)[number])) return fail("Choose FNB, Stanbic Bank or another payment method.");
+  if(paymentMethod==="other"&&!paymentMethodDetail) return fail("Describe the other payment method.");
   const popSubmission=String(form.get("popSubmission")||"internal").trim().toLowerCase();
   if(!["internal","whatsapp"].includes(popSubmission)) return fail("Choose internal portal upload or WhatsApp for POP submission.");
   const proof=form.get("proof");
@@ -28,7 +33,7 @@ export async function POST(request:Request){
   if(hasProof){const receiptKey=`payment-proofs/${id}/${proof.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;receiptUrl=await uploadReceipt(receiptKey,await proof.arrayBuffer(),proof.type);}
   try { await env.DB.batch([
    env.DB.prepare("INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender,password_salt,password_hash) VALUES (?,?,?,?,?,'pending',?,?,?,?,?,?,?,?,?,?)").bind(id,firstName,lastName,String(form.get("phone")).trim(),String(form.get("email")).trim().toLowerCase(),expiresAt,token,now.toISOString(),String(form.get("idNumber")).trim(),String(form.get("dateOfBirth")),String(form.get("placeOfBirth")).trim(),String(form.get("membershipLocation")),String(form.get("gender")),passwordRecord.salt,passwordRecord.hash),
-   env.DB.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at) VALUES (?,?,200,?,?,?,'','submitted','Registration payment',?,'')").bind(crypto.randomUUID(),id,receiptUrl,hasProof?proof.name:"",hasProof?proof.type:"",now.toISOString())
+   env.DB.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at) VALUES (?,?,200,?,?,?,'','submitted',?,?,'')").bind(crypto.randomUUID(),id,receiptUrl,hasProof?proof.name:"",hasProof?proof.type:"",`Payment method: ${paymentMethodLabel(paymentMethod,paymentMethodDetail)}; POP: ${popSubmission}`,now.toISOString())
   ]); } catch(error) { if(receiptUrl) await deleteReceipt(receiptUrl); throw error; }
   return Response.json({membershipId:id,expiresAt:new Date(expiresAt+"T23:59:59Z").toISOString()});
  }catch(error){
