@@ -15,6 +15,6 @@ export default async function PortalHome(){
     <article className="access-card admin-access"><span className="access-number">02</span><h3>Admin Login</h3><p>Review registrations and payments, activate memberships, manage cards, codes, fixtures and communications.</p><a href="/admin-login?return_to=/admin">Continue as administrator <span>→</span></a><small>Sign in with your authorised email and six-digit PIN.</small></article>
    </div>
   </section>
-  <footer className="gateway-footer"><span>Township Rollers F.C. Membership</span><a href="/club">View public club updates</a></footer>
+  <footer className="gateway-footer"><span>Township Rollers F.C. Membership</span></footer>
  </main>
 }

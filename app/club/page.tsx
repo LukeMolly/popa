@@ -36,12 +36,6 @@ type Club = {
     goalDifference: number;
     points: number;
   }>;
-  updates: Array<{
-    id: number;
-    title: string;
-    body: string;
-    createdAt: string;
-  }>;
   players: Player[];
   officialMatch: {
     opponent: string;
@@ -126,13 +120,13 @@ export default function ClubPage() {
         <ClubLogo/>
         <p>TOWNSHIP ROLLERS FC</p>
         <h1>Popa Popa</h1>
-        <span>Fixtures, team, results and club news</span>
+        <span>Fixtures, team, results and standings</span>
       </header>
       <div className="club-sections">
         {error ? (
           <p role="alert">{error}</p>
         ) : !data ? (
-          <p>Loading club updates…</p>
+          <p>Loading club information…</p>
         ) : (
           <>
             <section className="member-panel">
@@ -303,22 +297,6 @@ export default function ClubPage() {
                   <p className="muted">No standings published yet.</p>
                 )}
               </div>
-            </section>
-            <section className="member-panel">
-              <h2>Organisation updates</h2>
-              {data.updates.length ? (
-                data.updates.map((u) => (
-                  <article className="update" key={u.id}>
-                    <small>
-                      {new Date(u.createdAt).toLocaleDateString("en-BW")}
-                    </small>
-                    <h3>{u.title}</h3>
-                    <p>{u.body}</p>
-                  </article>
-                ))
-              ) : (
-                <p className="muted">No updates published yet.</p>
-              )}
             </section>
           </>
         )}
