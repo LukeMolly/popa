@@ -32,14 +32,29 @@ export async function POST(request:Request){
   if(v.action==="review"){
    const id=clean(v.id,60),status=clean(v.status,20),note=clean(v.note,300);
    if(!["approved","rejected"].includes(status))return error("Choose approve or reject.");
-   const payment=await db.prepare("SELECT member_id AS memberId,status FROM payments WHERE id=?").bind(id).first() as {memberId:string;status:string}|null;
-   if(!payment||payment.status!=="submitted")return error("Payment is no longer awaiting review.",409);
-   const statements=[db.prepare("UPDATE payments SET status=?,note=CASE WHEN ? = '' THEN note ELSE note || '; Review: ' || ? END,reviewed_at=? WHERE id=? AND status='submitted'").bind(status,note,note,now,id)];
-   if(status==="approved"){
-    const expiresAt="2027-07-31";
-    statements.push(db.prepare("UPDATE members SET status='active',expires_at=? WHERE id=?").bind(expiresAt,payment.memberId));
+   // One PostgreSQL statement atomically reviews the payment and, when
+   // approved, activates its member. Lock both rows to prevent double-review
+   // races; if either update errors, the entire statement is rolled back.
+   const reviewed=await db.prepare(
+    "WITH eligible AS MATERIALIZED (" +
+    " SELECT p.id,p.member_id FROM payments p " +
+    " JOIN members m ON m.id=p.member_id " +
+    " WHERE p.id=? AND p.status='submitted' FOR UPDATE OF p,m" +
+    "), payment_review AS (" +
+    " UPDATE payments p SET status=?," +
+    " note=CASE WHEN ?='' THEN p.note WHEN p.note='' THEN 'Review: ' || ? ELSE p.note || '; Review: ' || ? END," +
+    " reviewed_at=? FROM eligible e" +
+    " WHERE p.id=e.id AND p.status='submitted' RETURNING p.member_id" +
+    "), member_activation AS (" +
+    " UPDATE members m SET status='active',expires_at=?" +
+    " FROM payment_review r WHERE m.id=r.member_id AND ?='approved'" +
+    " RETURNING m.id" +
+    ") SELECT (SELECT COUNT(*) FROM payment_review)::int AS reviewed," +
+    " (SELECT COUNT(*) FROM member_activation)::int AS activated"
+   ).bind(id,status,note,note,note,now,"2027-07-31",status).first() as {reviewed:number;activated:number}|null;
+   if(Number(reviewed?.reviewed)!==1 || (status==="approved" && Number(reviewed?.activated)!==1)){
+    return error("Payment is no longer awaiting review.",409);
    }
-   await db.batch(statements);
    return Response.json({ok:true});
   }
   if(v.action==="fixture"){

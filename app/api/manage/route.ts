@@ -44,9 +44,16 @@ export async function POST(request:Request) {
       const codes=[...new Set(raw.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(Boolean))];
       if(!campaign||!codes.length) return fail("Enter a campaign and at least one code.");
       if(codes.length>500 || codes.some(s=>s.length>64||!/^[A-Z0-9_-]+$/.test(s))) return fail("Use up to 500 alphanumeric codes, with hyphens or underscores.");
-      const statements=codes.map(code=>db.prepare("INSERT OR IGNORE INTO promos (code,campaign,status,created_at) VALUES (?,?,'available',?)").bind(code,campaign,now));
-      const results=await db.batch(statements);
-      return Response.json({added:results.filter(x=>x.meta.changes).length,duplicates:results.filter(x=>!x.meta.changes).length});
+      // Insert the whole batch atomically with PostgreSQL conflict handling.
+      // Existing codes remain untouched, preserving their assignments.
+      const result=await db.prepare(
+        "INSERT INTO promos (code,campaign,status,created_at) " +
+        "SELECT submitted.code,?,'available',? " +
+        "FROM jsonb_array_elements_text(?::jsonb) AS submitted(code) " +
+        "WHERE TRUE ON CONFLICT (code) DO NOTHING RETURNING code"
+      ).bind(campaign,now,JSON.stringify(codes)).run();
+      const added=result.meta.changes;
+      return Response.json({added,duplicates:codes.length-added});
     }
     if(data.action==="assign") {
       const code=clean(data.code,64),memberId=clean(data.memberId,30);
