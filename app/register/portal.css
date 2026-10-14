@@ -83,3 +83,61 @@
  .portal-shell .registration-complete-card{padding:25px 20px 22px;border-radius:16px}
  .portal-shell .registration-complete-crest{width:66px;height:66px}
 }
+
+/* Responsive registration and completion improvements — preserve form and payment behaviour. */
+.portal-shell,.portal-shell *{box-sizing:border-box}
+.portal-shell{width:100%;min-width:0;overflow-x:clip}
+.portal-shell .workspace,.portal-shell .content-grid,.portal-shell .form-panel,.portal-shell .side-stack,
+.portal-shell .form-grid,.portal-shell .payment-box,.portal-shell .registration-complete-card{min-width:0}
+.portal-shell .form-grid>*{min-width:0}
+.portal-shell .field input,.portal-shell .field select,.portal-shell .phone-prefix-field,
+.portal-shell .phone-prefix-field input{width:100%;max-width:100%;min-width:0}
+.portal-shell .phone-prefix-field input{flex:1 1 0;width:1%;font-size:16px}
+.portal-shell .field input,.portal-shell .field select,.portal-shell .document-type-select{font-size:16px}
+.portal-shell .bank-account-details,.portal-shell .upload-zone,.portal-shell .payment-copy,
+.portal-shell .bank-option,.portal-shell .registration-complete-id{min-width:0;overflow-wrap:anywhere}
+.portal-shell .payment-copy>div{min-width:0;flex:1}
+.portal-shell .upload-zone>span{min-width:0;overflow-wrap:anywhere}
+.portal-shell .upload-zone strong,.portal-shell .upload-zone small{overflow-wrap:anywhere}
+.portal-shell .bank-option-grid>*{min-width:0}
+.portal-shell .registration-complete-id strong{word-break:break-word}
+.portal-shell .registration-complete-membership-status{flex-wrap:wrap}
+.portal-shell .registration-complete-contact{overflow-wrap:anywhere}
+.portal-shell .registration-complete-home{min-height:44px;align-content:center}
+.portal-shell .consent{min-width:0}
+.portal-shell .consent input{flex:0 0 auto}
+.portal-shell .submit-button{width:100%;min-height:50px;height:auto;white-space:normal;padding:12px 16px;touch-action:manipulation}
+@media(max-width:800px){
+ .portal-shell .content-grid{grid-template-columns:minmax(0,1fr)}
+ .portal-shell .workspace{padding-inline:18px}
+ .portal-shell .side-stack{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .portal-shell .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .portal-shell .hero-copy{right:18px}
+}
+@media(max-width:600px){
+ .portal-shell .topbar{padding-inline:16px;gap:12px}
+ .portal-shell .brand{min-width:0}
+ .portal-shell .brand>span:last-child{min-width:0}
+ .portal-shell .brand strong{font-size:.83rem;overflow-wrap:anywhere}
+ .portal-shell .workspace{padding-inline:14px}
+ .portal-shell .content-grid{gap:16px;margin-top:16px}
+ .portal-shell .form-grid,.portal-shell .side-stack{grid-template-columns:minmax(0,1fr)}
+ .portal-shell .form-panel{padding:20px 16px}
+ .portal-shell .payment-box{padding:15px}
+ .portal-shell .bank-option-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .portal-shell .payment-copy{flex-wrap:wrap}
+ .portal-shell .payment-copy>b{margin-left:auto}
+ .portal-shell .section-heading h2{font-size:clamp(1.3rem,6vw,1.65rem)}
+ .portal-shell .registration-complete-screen{min-height:calc(100dvh - 76px);padding:18px 12px}
+ .portal-shell .registration-complete-card{width:100%;max-width:490px;padding:22px 16px}
+ .portal-shell .registration-complete-membership-status{gap:8px}
+ .portal-shell .registration-complete-id{margin:17px 0 12px}
+ .portal-shell .registration-complete-contact{min-height:50px}
+}
+@media(max-width:360px){
+ .portal-shell .phone-prefix{min-width:60px;padding-inline:8px}
+ .portal-shell .bank-option-grid{gap:8px}
+ .portal-shell .bank-option{padding:7px;min-height:95px;font-size:.78rem}
+ .portal-shell .registration-complete-card{padding:20px 13px}
+ .portal-shell .registration-complete-membership-status span{font-size:.65rem}
+}

@@ -52,3 +52,16 @@
 .member-risk-reasons{line-height:1.6;overflow-wrap:anywhere}
 .member-risk-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .member-risk-actions button{min-height:42px}
+
+/* Fraud review actions and office payment list remain usable on phones. */
+.member-risk-actions{min-width:0}
+.member-risk-actions button{touch-action:manipulation}
+@media(max-width:600px){
+ .member-risk-review .panel-head{align-items:flex-start;flex-direction:column}
+ .member-risk-actions{flex-direction:column}
+ .member-risk-actions button{width:100%;min-height:46px}
+ .office-page .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .office-page .office-actions{display:flex;flex-wrap:wrap;gap:8px}
+ .office-page .office-actions button{min-height:44px}
+ .member-risk-badge{max-width:100%;overflow-wrap:anywhere}
+}
