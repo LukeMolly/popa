@@ -82,25 +82,38 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
     </header>
 
     {result ? (
-      <section className="workspace" style={{ maxWidth: 760, margin: "36px auto 80px", padding: "0 18px" }} aria-live="polite">
-        <div className="panel status-panel" style={{ textAlign: "center", padding: "44px 28px" }}>
-          <CheckCircle2 size={56} color="#15803d" aria-hidden="true"/>
-          <span className="eyebrow" style={{ display: "block", marginTop: 14 }}>REGISTRATION SUBMITTED</span>
-          <h1>Hello {result.firstName},</h1>
-          <p>Your Township Rollers F.C. membership registration has been submitted successfully. The membership administration team will review your details.</p>
-          <p><strong>Membership ID: {result.membershipId}</strong></p>
-          {result.proofUploaded
-            ? <p><CheckCircle2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }} aria-hidden="true"/>Your proof of payment has been attached and is awaiting admin review.</p>
-            : paymentMethod
-              ? <p>Your payment method has been recorded. Please send your POP to the membership administrator for verification.</p>
-              : <p>No payment was recorded. You may contact the administrator for payment guidance.</p>}
-          <p>For your membership status and all inquiries, contact the membership administrator on WhatsApp at <strong>{adminWhatsAppDisplay}</strong>. Please provide your membership ID when contacting the administrator.</p>
-          <a className="submit-button" href={whatsAppLink} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, textDecoration: "none", marginTop: 16, padding: "14px 22px" }}>
-            <MessageCircle size={20}/> Contact admin on WhatsApp
+      <section className="registration-complete-screen" aria-live="polite" aria-labelledby="registration-complete-title">
+        <div className="registration-complete-card">
+          <ClubLogo className="registration-complete-crest" />
+          <p className="registration-complete-club">TOWNSHIP ROLLERS F.C.</p>
+          <p className="registration-complete-motto">POPA POPA EA IPOPA</p>
+          <div className="registration-complete-check"><CheckCircle2 size={25} aria-hidden="true" /></div>
+          <p className="registration-complete-label">REGISTRATION RECEIVED</p>
+          <h1 id="registration-complete-title">Thank you, <span>{result.firstName}!</span></h1>
+          <p className="registration-complete-intro">Your membership registration has been received for review.</p>
+          <div className="registration-complete-id">
+            <span>YOUR MEMBERSHIP ID</span>
+            <strong>{result.membershipId}</strong>
+          </div>
+          <p className="registration-complete-payment">
+            {result.proofUploaded
+              ? "Proof of payment attached. Verification is pending."
+              : paymentMethod
+                ? "Payment method recorded. Send your POP to the membership administrator."
+                : "Contact the membership administrator for payment assistance."}
+          </p>
+          <a className="registration-complete-contact" href={whatsAppLink} target="_blank" rel="noopener noreferrer">
+            <MessageCircle size={19} aria-hidden="true" />
+            <span>Contact Membership Admin</span>
+            <span aria-hidden="true">→</span>
           </a>
-          <p style={{ marginTop: 18 }}>No member account or login is required.</p>
-          <a href="/" style={{ display: "inline-block", marginTop: 8 }}>Return to home</a>
+          <a className="registration-complete-home" href="/">Return to homepage</a>
+          <div className="registration-complete-welcome">
+            <strong>Welcome to POPA, {result.firstName}.</strong>
+            <span>Your club. Your membership.</span>
+          </div>
         </div>
+        <p className="registration-complete-bottom">Township Rollers F.C. · 2026–2027 season</p>
       </section>
     ) : (
       <>

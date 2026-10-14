@@ -37,3 +37,48 @@
   .phone-prefix-field input{border:0!important;border-radius:0!important;background:transparent!important;flex:1;min-width:0;height:44px;box-shadow:none!important;letter-spacing:.035em}
   .phone-prefix-field:focus-within{outline:2px solid #1769e8;outline-offset:2px}
 }
+
+/* Personalized thank-you screen; shown only after a successful membership submission. */
+.portal-shell .registration-complete-screen{
+ min-height:calc(100dvh - 76px);display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:15px;padding:34px 18px;background:linear-gradient(145deg,#071a36 0%,#123b7a 73%,#f6b519 73%);
+}
+.portal-shell .registration-complete-card{
+ width:min(100%,490px);padding:30px 32px 25px;text-align:center;background:#fff;
+ border-radius:20px;border-top:6px solid #f6b519;box-shadow:0 25px 75px #06142c66;
+}
+.portal-shell .registration-complete-crest{display:block;width:74px;height:74px;object-fit:contain;margin:0 auto 12px}
+.portal-shell .registration-complete-club{margin:0;color:#123b7a;font-size:.75rem;font-weight:900;letter-spacing:.14em}
+.portal-shell .registration-complete-motto{margin:6px 0 0;color:#a57816;font-size:.7rem;font-weight:800;letter-spacing:.13em}
+.portal-shell .registration-complete-check{width:44px;height:44px;display:grid;place-items:center;margin:20px auto 10px;border-radius:50%;background:#e7f5ec;color:#167348}
+.portal-shell .registration-complete-label{margin:0;color:#167348;font-size:.7rem;font-weight:900;letter-spacing:.14em}
+.portal-shell .registration-complete-card h1{
+ margin:10px 0 6px;color:#071a39;font-size:clamp(1.8rem,5vw,2.3rem);
+ line-height:1.18;overflow-wrap:anywhere;letter-spacing:-.035em;font-weight:900;
+}
+.portal-shell .registration-complete-card h1 span{color:#123b7a}
+.portal-shell .registration-complete-intro{max-width:350px;margin:0 auto;color:#586a81;line-height:1.5;font-size:.94rem}
+.portal-shell .registration-complete-id{display:grid;gap:6px;margin:22px 0 14px;padding:13px;border:1px solid #dde5f0;border-radius:11px;background:#f5f8fd}
+.portal-shell .registration-complete-id span{color:#60738c;font-size:.67rem;font-weight:900;letter-spacing:.12em}
+.portal-shell .registration-complete-id strong{color:#071a39;font-size:1.16rem;letter-spacing:.055em;overflow-wrap:anywhere}
+.portal-shell .registration-complete-payment{margin:0 auto 21px;max-width:365px;color:#546982;line-height:1.45;font-size:.83rem}
+.portal-shell .registration-complete-contact{
+ display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+ min-height:52px;padding:12px 16px;border-radius:10px;background:#f6b519;
+ color:#071a39;font-size:.9rem;font-weight:900;text-decoration:none;
+}
+.portal-shell .registration-complete-contact span:last-child{margin-left:auto;font-size:1.15rem}
+.portal-shell .registration-complete-contact svg{flex-shrink:0}
+.portal-shell .registration-complete-contact:hover{background:#ffd25a}
+.portal-shell .registration-complete-home{display:inline-block;margin:13px auto 17px;padding:6px;color:#123b7a;font-size:.83rem;font-weight:750;text-decoration:underline;text-underline-offset:3px}
+.portal-shell .registration-complete-contact:focus-visible,
+.portal-shell .registration-complete-home:focus-visible{outline:3px solid #123b7a;outline-offset:3px}
+.portal-shell .registration-complete-welcome{border-top:1px solid #e4eaf3;padding-top:16px;display:grid;gap:4px}
+.portal-shell .registration-complete-welcome strong{font-size:.92rem;color:#123b7a}
+.portal-shell .registration-complete-welcome span{font-size:.78rem;color:#718197}
+.portal-shell .registration-complete-bottom{margin:0;color:#e5edf7;font-size:.75rem;text-align:center}
+@media(max-width:520px){
+ .portal-shell .registration-complete-screen{padding:22px 14px}
+ .portal-shell .registration-complete-card{padding:25px 20px 22px;border-radius:16px}
+ .portal-shell .registration-complete-crest{width:66px;height:66px}
+}
