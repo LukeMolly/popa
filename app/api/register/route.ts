@@ -1,5 +1,7 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../lib/platform";
 import { PAYMENT_METHOD_CODES, paymentMethodLabel } from "../../../lib/payment-methods";
+import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
+import { isRegistrationRateAllowed, readLimitedRegistrationForm } from "../../../lib/registration-security";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +18,15 @@ function validProofSignature(bytes: Uint8Array, type: string) {
 }
 
 export async function POST(request: Request) {
+  if (!isTrustedWrite(request)) return writeDenied();
   let receiptUrl = "";
   try {
-    const form = await request.formData();
+    if (!(await isRegistrationRateAllowed(request))) {
+      return Response.json({ error: "Too many registration attempts. Please try again later." }, {
+        status: 429, headers: { "Retry-After": "3600", "Cache-Control": "no-store" },
+      });
+    }
+    const form = await readLimitedRegistrationForm(request);
     const paymentMethod = String(form.get("paymentMethod") || "").trim().toLowerCase();
     const paymentMethodDetail = String(form.get("paymentMethodDetail") || "").trim().slice(0, 120);
     const reference = String(form.get("reference") || "").trim().slice(0, 100);
@@ -111,6 +119,8 @@ export async function POST(request: Request) {
 
     return Response.json({ membershipId, firstName, proofUploaded: hasProof }, { status: 201 });
   } catch (error) {
+    if (error instanceof RangeError) return fail("POP attachment and registration must be within the 5 MB upload limit.", 413);
+    if (error instanceof TypeError) return fail("Invalid registration form data.");
     if (receiptUrl) {
       try { await deleteReceipt(receiptUrl); }
       catch (cleanupError) { console.error("Could not clean up unattached POP", cleanupError); }
