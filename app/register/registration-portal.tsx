@@ -65,44 +65,33 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
     }
   }
 
-  return <main className="portal-shell">
-    <header className="topbar">
+  return <main className={result ? "registration-confirmation-page" : "portal-shell"} style={result ? { minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", padding: "28px 16px", background: "linear-gradient(145deg, #071b3b 0%, #143a75 77%, #f8b91d 77.1%, #f8b91d 100%)" } : undefined}>
+    {!result && <header className="topbar">
       <a className="brand" href="/" aria-label="Township Rollers home">
         <ClubLogo/><span><strong>Township Rollers</strong><small>Member Onboarding</small></span>
       </a>
       <a href="/">Home</a>
-    </header>
+    </header>}
 
     {result ? (
-      <section className="workspace" style={{ maxWidth: 600, margin: "28px auto 64px", padding: "0 16px" }} aria-live="polite">
-        <div className="panel status-panel" style={{ padding: "clamp(24px, 5vw, 40px)", borderRadius: 22 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-            <ClubLogo/>
-            <div><strong style={{ display: "block", fontSize: 16 }}>TOWNSHIP ROLLERS F.C.</strong><span style={{ color: "#64748b", fontSize: 13 }}>Official Membership Registration</span></div>
+      <section aria-live="polite" style={{ width: "100%", maxWidth: 560 }}>
+        <div style={{ background: "#fff", borderRadius: 28, borderTop: "9px solid #f8b91d", padding: "clamp(26px, 6vw, 46px) clamp(20px, 5vw, 36px)", boxShadow: "0 24px 60px rgba(0,0,0,.15)", textAlign: "center", color: "#0c244b" }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}><ClubLogo/></div>
+          <p style={{ fontWeight: 800, fontSize: 14, letterSpacing: 2.5, margin: "0 0 28px" }}>TOWNSHIP ROLLERS FC</p>
+          <div style={{ width: 76, height: 76, borderRadius: "50%", background: "#e6f5ed", color: "#15803d", display: "grid", placeItems: "center", margin: "0 auto 22px" }}>
+            <CheckCircle2 size={46} strokeWidth={2.5} aria-hidden="true"/>
           </div>
-          <div style={{ height: 1, background: "#e2e8f0", marginBottom: 28 }}/>
-          <div style={{ textAlign: "center" }}>
-            <CheckCircle2 size={52} color="#15803d" aria-hidden="true"/>
-            <h1 style={{ fontSize: "clamp(24px, 5vw, 30px)", lineHeight: 1.2, margin: "16px 0 10px" }}>Registration Successful!</h1>
-            <p style={{ fontSize: 15, lineHeight: 1.6, color: "#64748b", margin: "0 0 22px" }}>Thank you, {result.firstName}. Your registration has been received and is awaiting review.</p>
+          <h1 style={{ fontSize: "clamp(26px, 6vw, 36px)", lineHeight: 1.2, fontWeight: 700, margin: "0 0 16px" }}>Registration Successful!</h1>
+          <p style={{ color: "#66768a", fontSize: 16, lineHeight: 1.6, margin: "0 0 24px" }}>Thank you, {result.firstName}. Your registration has been received and is awaiting review.</p>
+          <div style={{ background: "#f3f6fa", borderRadius: 14, padding: "18px 12px", marginBottom: 22 }}>
+            <span style={{ display: "block", color: "#66768a", fontSize: 11, fontWeight: 800, letterSpacing: 1.5 }}>MEMBERSHIP ID</span>
+            <strong style={{ display: "block", fontSize: "clamp(18px, 5vw, 24px)", margin: "8px 0", overflowWrap: "anywhere" }}>{result.membershipId}</strong>
+            <span style={{ display: "inline-block", borderRadius: 18, padding: "5px 13px", fontSize: 12, fontWeight: 800, background: "#fff0c4", color: "#795000" }}>Pending Review</span>
           </div>
-          <div style={{ background: "#f1f5f9", borderRadius: 14, padding: "18px 12px", textAlign: "center", marginBottom: 24 }}>
-            <span style={{ display: "block", color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 1.3 }}>YOUR MEMBERSHIP ID</span>
-            <strong style={{ display: "block", margin: "8px 0", fontSize: "clamp(18px, 4.5vw, 23px)", overflowWrap: "anywhere" }}>{result.membershipId}</strong>
-            <span style={{ display: "inline-block", borderRadius: 20, background: "#fef3c7", color: "#92400e", padding: "5px 12px", fontSize: 12, fontWeight: 700 }}>Pending Review</span>
-          </div>
-          <div style={{ marginBottom: 22 }}>
-            <strong style={{ display: "block", marginBottom: 6 }}>Next step</strong>
-            <p style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6, margin: 0 }}>{result.proofUploaded
-              ? "Your proof of payment has been received and is awaiting verification."
-              : paymentMethod
-                ? "Your payment method has been recorded. Please send your proof of payment to Membership Administration."
-                : "If you have not submitted proof of payment, please contact Membership Administration for assistance."}</p>
-          </div>
-          <a href={whatsAppLink} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", boxSizing: "border-box", padding: "15px 14px", background: "#0759c9", color: "#ffffff", borderRadius: 12, textDecoration: "none", fontSize: 14, fontWeight: 700, textAlign: "center" }}>
-            <MessageCircle size={20} aria-hidden="true"/> Contact Membership Administration
-          </a>
-          <a href="/" style={{ display: "block", textAlign: "center", marginTop: 22, fontSize: 14, fontWeight: 600, textDecoration: "none" }}>Return to Homepage</a>
+          <p style={{ color: "#66768a", fontSize: 14, lineHeight: 1.55, margin: "0 0 24px" }}>{result.proofUploaded ? "Your proof of payment is awaiting verification." : paymentMethod ? "Please send your proof of payment to Membership Administration." : "For payment guidance, contact Membership Administration."}</p>
+          <a href={whatsAppLink} target="_blank" rel="noopener noreferrer" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, background: "#f8b91d", color: "#0c244b", borderRadius: 13, padding: "16px 12px", minHeight: 54, fontSize: 15, fontWeight: 800, textDecoration: "none" }}><MessageCircle size={19} aria-hidden="true"/> Contact Membership Administration <span aria-hidden="true">→</span></a>
+          <a href="/" style={{ display: "block", margin: "20px 0 24px", color: "#0c244b", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>Return to POPA homepage</a>
+          <div style={{ borderTop: "1px solid #e6eaf0", paddingTop: 20, color: "#88919e", fontSize: 12, letterSpacing: .3 }}>POPA POPA EA IPOPA · 2026–2027 season</div>
         </div>
       </section>
     ) : (
