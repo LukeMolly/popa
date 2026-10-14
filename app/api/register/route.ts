@@ -1,13 +1,35 @@
-import { DB } from "../../../lib/platform";
+import { DB, deleteReceipt, uploadReceipt } from "../../../lib/platform";
 
 export const dynamic = "force-dynamic";
 
 const requiredFields = ["fullName", "idNumber", "dateOfBirth", "placeOfBirth", "membershipLocation", "gender", "email", "phone"];
 const fail = (error: string, status = 400) => Response.json({ error }, { status });
+const maxProofSize = 5 * 1024 * 1024;
+const proofTypes = ["application/pdf", "image/jpeg", "image/png"];
+
+function validProofSignature(bytes: Uint8Array, type: string) {
+  if (type === "application/pdf") return bytes.length >= 5 && [37, 80, 68, 70, 45].every((byte, index) => bytes[index] === byte);
+  if (type === "image/jpeg") return bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+  if (type === "image/png") return bytes.length >= 8 && [137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte);
+  return false;
+}
 
 export async function POST(request: Request) {
+  let receiptUrl = "";
   try {
     const form = await request.formData();
+    const proof = form.get("proof");
+    const hasProof = proof instanceof File && proof.size > 0;
+    if (hasProof && (proof.size > maxProofSize || !proofTypes.includes(proof.type))) {
+      return fail("POP attachment must be a PDF, JPG or PNG file of 5 MB or less.");
+    }
+    let proofBuffer: ArrayBuffer | undefined;
+    if (hasProof) {
+      proofBuffer = await proof.arrayBuffer();
+      if (!validProofSignature(new Uint8Array(proofBuffer), proof.type)) {
+        return fail("The POP attachment is not a valid PDF, JPG or PNG file.");
+      }
+    }
     for (const key of requiredFields) {
       if (!String(form.get(key) || "").trim()) return fail("Missing " + key + ".");
     }
@@ -41,17 +63,41 @@ export async function POST(request: Request) {
     const membershipId = "TRFC-" + crypto.randomUUID().slice(0, 8).toUpperCase();
     const token = crypto.randomUUID();
 
-    // KYC onboarding only: do not issue member credentials, activate a membership,
-    // or create a payment submission. Existing admin review workflows stay intact.
-    await DB.prepare(
-      "INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender) VALUES (?,?,?,?,?,'pending','',?,?,?,?,?,?,?)"
-    ).bind(
+    // Members are still onboarded as pending without credentials.
+    // If POP was attached, create one existing payment-review row atomically
+    // with the member registration, leaving the admin portal unchanged.
+    const insertMember =
+      "INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender) " +
+      "VALUES (?,?,?,?,?,'pending','',?,?,?,?,?,?,?)";
+    const memberArgs = [
       membershipId, firstName, lastName, phone, email, token, now.toISOString(),
       idNumber, dateOfBirth, placeOfBirth, membershipLocation, gender
-    ).run();
+    ];
 
-    return Response.json({ membershipId }, { status: 201 });
+    if (hasProof && proofBuffer) {
+      const filename = proof.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 100) || "proof";
+      const receiptName = proof.name.slice(0, 200);
+      receiptUrl = await uploadReceipt("payment-proofs/kyc/" + membershipId + "/" + filename, proofBuffer, proof.type);
+      await DB.prepare(
+        "WITH member_insert AS (" + insertMember + " RETURNING id) " +
+        "INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at) " +
+        "SELECT ?,id,200,?,?,?,'','submitted',?,?,' ' FROM member_insert"
+      ).bind(
+        ...memberArgs,
+        crypto.randomUUID(), receiptUrl, receiptName, proof.type,
+        "POP attached during KYC onboarding; pending administrator verification",
+        now.toISOString()
+      ).run();
+    } else {
+      await DB.prepare(insertMember).bind(...memberArgs).run();
+    }
+
+    return Response.json({ membershipId, proofUploaded: hasProof }, { status: 201 });
   } catch (error) {
+    if (receiptUrl) {
+      try { await deleteReceipt(receiptUrl); }
+      catch (cleanupError) { console.error("Could not clean up unattached POP", cleanupError); }
+    }
     console.error("KYC onboarding registration failed", error);
     const message = String(error).toLowerCase();
     if (message.includes("23505") || message.includes("duplicate key") || message.includes("unique constraint")) {

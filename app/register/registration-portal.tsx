@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { CalendarDays, CheckCircle2, ChevronRight, MapPin, MessageCircle, ShieldCheck } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronRight, MapPin, MessageCircle, ShieldCheck, UploadCloud } from "lucide-react";
 import { ClubLogo } from "../components/club-logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,9 @@ function Field({ label, children, hint }: { label: string; children: React.React
 export default function RegistrationPortal({ accountEmail }: { accountEmail: string }) {
   const dobRef = useRef<HTMLInputElement>(null);
   const [gender, setGender] = useState("");
+  const [proofName, setProofName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ membershipId: string } | null>(null);
+  const [result, setResult] = useState<{ membershipId: string; proofUploaded: boolean } | null>(null);
   const [error, setError] = useState("");
   const latestBirthDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const whatsAppLink = "https://wa.me/" + adminWhatsApp + "?text=" + encodeURIComponent(
@@ -42,11 +43,11 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
     form.set("gender", gender);
     try {
       const response = await fetch("/api/register", { method: "POST", body: form });
-      const data = await response.json() as { membershipId?: string; error?: string };
+      const data = await response.json() as { membershipId?: string; proofUploaded?: boolean; error?: string };
       if (!response.ok || !data.membershipId) {
         throw new Error(data.error || "Registration could not be completed.");
       }
-      setResult({ membershipId: data.membershipId });
+      setResult({ membershipId: data.membershipId, proofUploaded: Boolean(data.proofUploaded) });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration could not be completed.");
@@ -71,6 +72,9 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
           <h1>Thank you for registering!</h1>
           <p>Your Township Rollers F.C. KYC information has been received and saved successfully. The membership administration team will review your details.</p>
           <p>Your registration reference is <strong>{result.membershipId}</strong>.</p>
+          {result.proofUploaded
+            ? <p><CheckCircle2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }} aria-hidden="true"/>Your proof of payment has been attached and is awaiting admin review.</p>
+            : <p>No proof of payment was attached. You may contact the administrator for payment guidance.</p>}
           <p>For the next steps, please contact the membership administrator on WhatsApp at <strong>{adminWhatsAppDisplay}</strong> and include your reference.</p>
           <a className="submit-button" href={whatsAppLink} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, textDecoration: "none", marginTop: 16, padding: "14px 22px" }}>
             <MessageCircle size={20}/> Contact admin on WhatsApp
@@ -120,6 +124,37 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
                   </RadioGroup>
                 </Field>
               </div>
+              <div className="payment-box">
+                <div className="payment-copy">
+                  <span className="icon-tile"><UploadCloud/></span>
+                  <div>
+                    <strong>Attach proof of payment (POP)</strong>
+                    <p>Optional: upload your payment receipt now for review by the membership administrator.</p>
+                  </div>
+                </div>
+                <label className="upload-zone">
+                  <UploadCloud size={24} aria-hidden="true"/>
+                  <span>
+                    <strong>{proofName || "Choose POP attachment"}</strong>
+                    <small>One PDF, JPG or PNG file · Maximum 5 MB</small>
+                  </span>
+                  <Input name="proof" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    onChange={event => {
+                      const file = event.currentTarget.files?.[0];
+                      if (!file) { setProofName(""); return; }
+                      if (file.size > 5 * 1024 * 1024 || !["application/pdf", "image/jpeg", "image/png"].includes(file.type)) {
+                        event.currentTarget.value = "";
+                        setProofName("");
+                        setError("POP attachment must be a PDF, JPG or PNG file of 5 MB or less.");
+                        return;
+                      }
+                      setProofName(file.name);
+                      setError("");
+                    }}
+                  />
+                </label>
+                <small style={{ display: "block", marginTop: 10 }}>Submitting POP is not required to complete KYC onboarding. Uploaded proof will appear in the existing administrator payment review.</small>
+              </div>
               {error && <p className="error" role="alert">{error}</p>}
               <label className="consent">
                 <input required type="checkbox"/> I confirm that these details are accurate and consent to their use for membership onboarding and contact by the club administration.
@@ -133,7 +168,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
             <div className="dark-card">
               <span className="eyebrow gold">WHAT HAPPENS NEXT</span>
               {[
-                ["01", "Complete and submit KYC"],
+                ["01", "Complete KYC and optionally attach POP"],
                 ["02", "Receive a registration reference"],
                 ["03", "Contact the admin on WhatsApp"]
               ].map(([number, title]) => <div className="step" key={number}><b>{number}</b><span>{title}</span></div>)}
