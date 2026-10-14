@@ -12,7 +12,7 @@ export default async function PortalHome(){
   <section className="gateway-actions">
    {admin ? (
     <div className="gateway-greeting">
-     <span className="gateway-greeting-mark" aria-hidden="true">TR</span>
+     <span className="gateway-greeting-mark"><ClubLogo className="gateway-greeting-crest"/></span>
      <div className="gateway-greeting-copy">
       <p className="gateway-greeting-label">POPA MEMBERSHIP</p>
       <h2>Hi, <span>{firstName}</span><span aria-hidden="true" className="gateway-greeting-wave"> 👋</span></h2>

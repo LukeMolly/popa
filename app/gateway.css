@@ -41,3 +41,8 @@
 .gateway-greeting-copy>p:last-child{margin:5px 0 0;color:#e0e8f5;font-size:.9rem}
 .gateway-greeting-wave{font-size:.8em}
 @media(max-width:520px){.gateway-greeting{gap:13px;padding:18px 15px}.gateway-greeting-mark{width:45px;height:45px;font-size:15px}}
+
+/* Official Township Rollers crest inside the authenticated greeting. */
+.gateway-greeting-mark{overflow:hidden}
+.gateway-greeting-mark .gateway-greeting-crest{display:block;width:46px;height:46px;object-fit:contain}
+@media(max-width:520px){.gateway-greeting-mark .gateway-greeting-crest{width:37px;height:37px}}
