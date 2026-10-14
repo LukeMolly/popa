@@ -1,4 +1,5 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../lib/platform";
+import { PAYMENT_METHOD_CODES, paymentMethodLabel } from "../../../lib/payment-methods";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,18 @@ export async function POST(request: Request) {
   let receiptUrl = "";
   try {
     const form = await request.formData();
+    const paymentMethod = String(form.get("paymentMethod") || "").trim().toLowerCase();
+    const paymentMethodDetail = String(form.get("paymentMethodDetail") || "").trim().slice(0, 120);
+    const reference = String(form.get("reference") || "").trim().slice(0, 100);
+    if (paymentMethod && !PAYMENT_METHOD_CODES.includes(paymentMethod as (typeof PAYMENT_METHOD_CODES)[number])) {
+      return fail("Select a valid banking or payment method.");
+    }
+    if (paymentMethod === "other" && !paymentMethodDetail) {
+      return fail("Specify the other payment method.");
+    }
     const proof = form.get("proof");
     const hasProof = proof instanceof File && proof.size > 0;
+    if (hasProof && !paymentMethod) return fail("Choose the bank or payment method used for the attached POP.");
     if (hasProof && (proof.size > maxProofSize || !proofTypes.includes(proof.type))) {
       return fail("POP attachment must be a PDF, JPG or PNG file of 5 MB or less.");
     }
@@ -63,9 +74,8 @@ export async function POST(request: Request) {
     const membershipId = "TRFC-" + crypto.randomUUID().slice(0, 8).toUpperCase();
     const token = crypto.randomUUID();
 
-    // Members are still onboarded as pending without credentials.
-    // If POP was attached, create one existing payment-review row atomically
-    // with the member registration, leaving the admin portal unchanged.
+    // KYC registration stays account-free and pending. Payments use the existing
+    // admin-visible table. Pay-later members are not counted as submitted payments.
     const insertMember =
       "INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender) " +
       "VALUES (?,?,?,?,?,'pending','',?,?,?,?,?,?,?)";
@@ -74,18 +84,25 @@ export async function POST(request: Request) {
       idNumber, dateOfBirth, placeOfBirth, membershipLocation, gender
     ];
 
-    if (hasProof && proofBuffer) {
-      const filename = proof.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 100) || "proof";
-      const receiptName = proof.name.slice(0, 200);
-      receiptUrl = await uploadReceipt("payment-proofs/kyc/" + membershipId + "/" + filename, proofBuffer, proof.type);
+    if (paymentMethod) {
+      let receiptName = "";
+      let receiptType = "";
+      if (hasProof && proofBuffer) {
+        const filename = proof.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 100) || "proof";
+        receiptName = proof.name.slice(0, 200);
+        receiptType = proof.type;
+        receiptUrl = await uploadReceipt("payment-proofs/kyc/" + membershipId + "/" + filename, proofBuffer, proof.type);
+      }
+      const note = "Payment method: " + paymentMethodLabel(paymentMethod, paymentMethodDetail) +
+        "; POP: " + (hasProof ? "attached during KYC onboarding" : "awaiting proof from member");
+      // One SQL statement guarantees the member and payment enter the admin tally together.
       await DB.prepare(
         "WITH member_insert AS (" + insertMember + " RETURNING id) " +
         "INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at) " +
-        "SELECT ?,id,200,?,?,?,'','submitted',?,?,' ' FROM member_insert"
+        "SELECT ?,id,200,?,?,?,?,'submitted',?,?,' ' FROM member_insert"
       ).bind(
         ...memberArgs,
-        crypto.randomUUID(), receiptUrl, receiptName, proof.type,
-        "POP attached during KYC onboarding; pending administrator verification",
+        crypto.randomUUID(), receiptUrl, receiptName, receiptType, reference, note,
         now.toISOString()
       ).run();
     } else {

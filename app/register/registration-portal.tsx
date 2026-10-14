@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { CalendarDays, CheckCircle2, ChevronRight, MapPin, MessageCircle, ShieldCheck, UploadCloud } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronRight, CreditCard, MapPin, MessageCircle, ShieldCheck, UploadCloud } from "lucide-react";
 import { ClubLogo } from "../components/club-logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PAYMENT_METHODS } from "../../lib/payment-methods";
 
 const adminWhatsApp = "26777800040";
 const adminWhatsAppDisplay = "+267 77 800 040";
@@ -18,10 +19,13 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   const dobRef = useRef<HTMLInputElement>(null);
   const [gender, setGender] = useState("");
   const [proofName, setProofName] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [paymentMethodDetail, setPaymentMethodDetail] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ membershipId: string; firstName: string; proofUploaded: boolean } | null>(null);
   const [error, setError] = useState("");
   const latestBirthDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const selectedBank = PAYMENT_METHODS.find(method => method.code === paymentMethod);
   const whatsAppLink = "https://wa.me/" + adminWhatsApp + "?text=" + encodeURIComponent(
     "Hello Township Rollers Membership Admin, my name is " + (result?.firstName ?? "") +
     ". My Township Rollers F.C. KYC registration was saved successfully. Membership ID: " +
@@ -38,10 +42,14 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!gender) { setError("Please select your gender."); return; }
+    if (paymentMethod === "other" && !paymentMethodDetail.trim()) { setError("Specify the other payment method."); return; }
+    if (proofName && !paymentMethod) { setError("Choose the bank or payment method used for the attached POP."); return; }
     setBusy(true);
     setError("");
     const form = new FormData(e.currentTarget);
     form.set("gender", gender);
+    form.set("paymentMethod", paymentMethod);
+    form.set("paymentMethodDetail", paymentMethodDetail);
     try {
       const response = await fetch("/api/register", { method: "POST", body: form });
       const data = await response.json() as { membershipId?: string; firstName?: string; proofUploaded?: boolean; error?: string };
@@ -75,7 +83,9 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
           <p><strong>Membership ID: {result.membershipId}</strong></p>
           {result.proofUploaded
             ? <p><CheckCircle2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }} aria-hidden="true"/>Your proof of payment has been attached and is awaiting admin review.</p>
-            : <p>No proof of payment was attached. You may contact the administrator for payment guidance.</p>}
+            : paymentMethod
+              ? <p>Your payment method has been recorded. Please send your POP to the membership administrator for verification.</p>
+              : <p>No payment was recorded. You may contact the administrator for payment guidance.</p>}
           <p>For your membership status and all inquiries, contact the membership administrator on WhatsApp at <strong>{adminWhatsAppDisplay}</strong>. Please provide your membership ID when contacting the administrator.</p>
           <a className="submit-button" href={whatsAppLink} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, textDecoration: "none", marginTop: 16, padding: "14px 22px" }}>
             <MessageCircle size={20}/> Contact admin on WhatsApp
@@ -127,10 +137,60 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
               </div>
               <div className="payment-box">
                 <div className="payment-copy">
+                  <span className="icon-tile"><CreditCard/></span>
+                  <div>
+                    <strong>Season membership payment</strong>
+                    <p>The registration fee is P200. Choose a bank to view the correct account details, or register now and pay later.</p>
+                  </div>
+                  <b>P200</b>
+                </div>
+                <div className="bank-choice-section">
+                  <strong>Banking / payment options</strong>
+                  <div className="bank-option-grid" role="group" aria-label="Choose payment method">
+                    {PAYMENT_METHODS.map(method => (
+                      <button key={method.code} type="button"
+                        aria-pressed={paymentMethod === method.code}
+                        className={"bank-option" + (paymentMethod === method.code ? " selected" : "")}
+                        onClick={() => {
+                          setPaymentMethod(method.code);
+                          setPaymentMethodDetail("");
+                        }}
+                      >
+                        {method.code === "fnb" || method.code === "stanbic"
+                          ? <img src={method.code === "fnb" ? "/bank-logos/fnb.png" : "/bank-logos/stanbic.png"} alt="" width={80} height={66} style={{ objectFit: "contain" }}/>
+                          : <CreditCard size={30} aria-hidden="true"/>}
+                        <span>{method.label}</span>
+                      </button>
+                    ))}
+                    <button type="button" aria-pressed={!paymentMethod} className={"bank-option" + (!paymentMethod ? " selected" : "")}
+                      onClick={() => { setPaymentMethod(""); setPaymentMethodDetail(""); }}>
+                      <span className="bank-pay-later">Pay later</span>
+                      <span>Register without payment</span>
+                    </button>
+                  </div>
+                  {selectedBank && selectedBank.code !== "other" && (
+                    <div className="bank-account-details">
+                      <strong>{selectedBank.accountName}</strong>
+                      <p><b>Bank:</b> {selectedBank.bankName}</p>
+                      <p><b>Account number:</b> <span>{selectedBank.accountNumber}</span></p>
+                      <p><b>Branch:</b> {selectedBank.branch}</p>
+                      <p><b>Branch code:</b> {selectedBank.branchCode}</p>
+                      <p><b>SWIFT:</b> {selectedBank.swiftCode}</p>
+                    </div>
+                  )}
+                  {paymentMethod === "other" && <Field label="Other payment method">
+                    <Input value={paymentMethodDetail} onChange={e => setPaymentMethodDetail(e.target.value)}
+                      placeholder="Cash, transfer or another bank" maxLength={120} required/>
+                  </Field>}
+                  {paymentMethod && <Field label="Payment reference (if available)">
+                    <Input name="reference" maxLength={100} placeholder="Transfer or deposit reference"/>
+                  </Field>}
+                </div>
+                <div className="payment-copy" style={{ marginTop: 20 }}>
                   <span className="icon-tile"><UploadCloud/></span>
                   <div>
                     <strong>Attach proof of payment (POP)</strong>
-                    <p>Optional: upload your payment receipt now for review by the membership administrator.</p>
+                    <p>Optional: upload your receipt now or send it to the administrator afterwards.</p>
                   </div>
                 </div>
                 <label className="upload-zone">
@@ -154,7 +214,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
                     }}
                   />
                 </label>
-                <small style={{ display: "block", marginTop: 10 }}>Submitting POP is not required to complete KYC onboarding. Uploaded proof will appear in the existing administrator payment review.</small>
+                <small style={{ display: "block", marginTop: 10 }}>POP upload is optional, but selecting the bank used records a pending payment for admin review. Only confirmed payments count as received funds.</small>
               </div>
               {error && <p className="error" role="alert">{error}</p>}
               <label className="consent">
@@ -169,9 +229,9 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
             <div className="dark-card">
               <span className="eyebrow gold">WHAT HAPPENS NEXT</span>
               {[
-                ["01", "Complete KYC and optionally attach POP"],
-                ["02", "Receive a registration reference"],
-                ["03", "Contact the admin on WhatsApp"]
+                ["01", "Complete KYC and choose how to pay"],
+                ["02", "Optionally upload your POP"],
+                ["03", "Receive your ID and contact admin"]
               ].map(([number, title]) => <div className="step" key={number}><b>{number}</b><span>{title}</span></div>)}
             </div>
             <div className="expiry-card"><MessageCircle/><div><small>MEMBERSHIP ADMIN</small><strong>{adminWhatsAppDisplay}</strong><span>Contact after submitting the form</span></div></div>
