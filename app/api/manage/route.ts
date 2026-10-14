@@ -1,13 +1,14 @@
 import { DB } from "../../../lib/platform";
 const env = { DB };
-import { isClubAdmin } from "../../admin-auth";
+import { getClubAdmin } from "../../admin-auth";
 import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
 export const dynamic = "force-dynamic";
 const clean = (x:unknown,n=200) => typeof x==="string" ? x.trim().slice(0,n) : "";
 const fail = (message:string,status=400) => Response.json({error:message},{status});
 export async function POST(request:Request) {
   if (!isTrustedWrite(request)) return writeDenied();
-  if (!(await isClubAdmin(["executive","membership"]))) return fail("Membership administrator access required.",403);
+  const admin=await getClubAdmin();
+  if (!admin || !["executive","membership"].includes(admin.role)) return fail("Membership administrator access required.",403);
   try {
     const data = await request.json() as Record<string,unknown>, db=env.DB, now=new Date().toISOString();
     if(data.action==="member") {
@@ -22,7 +23,18 @@ export async function POST(request:Request) {
     if(data.action==="status") {
       const id=clean(data.id,30),status=clean(data.status,20);
       if(!["active","pending","expired","suspended"].includes(status)) return fail("Invalid status.");
-      const result=await db.prepare("UPDATE members SET status=? WHERE id=?").bind(status,id).run();
+      const result=await db.prepare("UPDATE members SET status=? WHERE id=? AND (? <> 'active' OR risk_status NOT IN ('flagged','confirmed'))").bind(status,id,status).run();
+      return result.meta.changes ? Response.json({ok:true}) : fail("Account not found or requires fraud review before activation.",409);
+    }
+    if(data.action==="risk-review") {
+      const memberId=clean(data.id,30),decision=clean(data.decision,20),reason=clean(data.reason,300);
+      if(!["flagged","confirmed","cleared"].includes(decision)) return fail("Choose flag, confirm or clear.");
+      if(decision!=="cleared" && reason.length<5) return fail("Provide a short reason for this decision.");
+      const result=await db.prepare(
+        "UPDATE members SET risk_status=?," +
+        " risk_reasons=CASE WHEN ?='flagged' THEN ? WHEN ?='confirmed' THEN CASE WHEN risk_reasons='' THEN ? ELSE risk_reasons || '; Review: ' || ? END ELSE risk_reasons END," +
+        " risk_reviewed_at=?,risk_reviewed_by=? WHERE id=?"
+      ).bind(decision,decision,reason,decision,reason,reason,now,admin.email,memberId).run();
       return result.meta.changes ? Response.json({ok:true}) : fail("Member not found.",404);
     }
     if(data.action==="expiry") {
@@ -59,7 +71,7 @@ export async function POST(request:Request) {
       const code=clean(data.code,64),memberId=clean(data.memberId,30);
       const member=await db.prepare("SELECT id FROM members WHERE id=?").bind(memberId).first();
       if(!member) return fail("Select a valid member.");
-      const result=await db.prepare("UPDATE promos SET member_id=?,status='assigned' WHERE code=? AND status='available'").bind(memberId,code).run();
+      const result=await db.prepare("UPDATE promos SET member_id=?,status='assigned' WHERE code=? AND status='available' AND EXISTS (SELECT 1 FROM members WHERE id=? AND risk_status NOT IN ('flagged','confirmed'))").bind(memberId,code,memberId).run();
       return result.meta.changes ? Response.json({ok:true}) : fail("Code already assigned or unavailable.",409);
     }
     return fail("Unknown action.");
