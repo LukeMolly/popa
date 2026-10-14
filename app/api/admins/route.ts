@@ -19,7 +19,7 @@ export async function GET() {
       current,
       administrators: [
         { email: ownerEmail, name: "Botlhe Lucas", role: "executive", active: 1, permanent: true },
-        ...rows.results,
+        ...rows.results.filter(row => String(row.email).toLowerCase() !== ownerEmail),
       ],
     });
   } catch (error) {
@@ -33,7 +33,21 @@ export async function POST(request: Request) {
   if (!current) return fail("Executive administrator access required.", 403);
   try {
     const data = await request.json() as Record<string, unknown>;
-    const action = clean(data.action, 20), email = clean(data.email).toLowerCase();
+    const action = clean(data.action, 40), email = clean(data.email).toLowerCase();
+    if (action === "rotate-executive-pin") {
+      if (current.email.toLowerCase() !== ownerEmail) return fail("Only the permanent executive can rotate this PIN.", 403);
+      const oldPin = clean(data.oldPin, 6);
+      const newPin = clean(data.newPin, 6);
+      if (!/^\d{6}$/.test(oldPin) || !/^\d{6}$/.test(newPin)) return fail("Enter the current and new six-digit PINs.");
+      if (oldPin === newPin || /^([0-9])\1{5}$/.test(newPin) || ["123456","654321","012345","123123"].includes(newPin)) return fail("Choose a different, less predictable six-digit PIN.");
+      const existing = await env.DB.prepare("SELECT pin_salt AS pinSalt,pin_hash AS pinHash FROM admin_users WHERE email=? AND role='executive' AND active=1").bind(ownerEmail).first() as {pinSalt:string;pinHash:string}|null;
+      if (!existing || !existing.pinHash || (await hashAdminPin(oldPin,existing.pinSalt)) !== existing.pinHash) return fail("Current executive PIN is incorrect.", 403);
+      const now = new Date().toISOString();
+      const salt = crypto.randomUUID(), pinHash = await hashAdminPin(newPin,salt);
+      await env.DB.prepare("UPDATE admin_users SET pin_salt=?,pin_hash=?,updated_at=? WHERE email=? AND role='executive'").bind(salt,pinHash,now,ownerEmail).run();
+      await env.DB.prepare("DELETE FROM admin_sessions WHERE email=?").bind(ownerEmail).run();
+      return Response.json({ ok: true });
+    }
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) return fail("Enter a valid administrator email address.");
     if (email === ownerEmail) return fail("The Executive Access Administrator account is permanent.", 409);
     if (action === "delete") {
