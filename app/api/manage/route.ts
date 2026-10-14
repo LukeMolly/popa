@@ -53,12 +53,6 @@ export async function POST(request:Request) {
       const result=await db.prepare("UPDATE promos SET member_id=?,status='assigned' WHERE code=? AND status='available'").bind(memberId,code).run();
       return result.meta.changes ? Response.json({ok:true}) : fail("Code already assigned or unavailable.",409);
     }
-    if(data.action==="update") {
-      const title=clean(data.title,150),body=clean(data.body,3000);
-      if(!title||!body) return fail("Title and message are required.");
-      await db.prepare("INSERT INTO updates (title,body,created_at) VALUES (?,?,?)").bind(title,body,now).run();
-      return Response.json({ok:true});
-    }
     return fail("Unknown action.");
   } catch(e) {console.error(e);return fail("Could not save. Please try again.",500)}
 }

@@ -712,8 +712,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
       </section>
       </>}
       {canOperations && <>
-      <div className="member-columns">
-        <section className="member-panel">
+      <section className="member-panel">
           <h2>
             {editingStanding ? "Edit team standing" : "Add team standing"}
           </h2>
@@ -781,31 +780,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
             </div>
           </form>
           <p className="muted">{data.standings.length} teams entered</p>
-        </section>
-        <section className="member-panel">
-          <h2>Organisation update</h2>
-          <form
-            className="office-form"
-            onSubmit={(e) => void form(e, "update")}
-          >
-            <label>
-              Title
-              <input name="title" maxLength={150} required />
-            </label>
-            <label>
-              Message
-              <textarea name="body" rows={7} maxLength={3000} required />
-            </label>
-            <button disabled={busy} className="primary">
-              Publish to members
-            </button>
-          </form>
-          <p className="muted">
-            Published here and on the club page. Internal office communiqués
-            remain separate.
-          </p>
-        </section>
-      </div>
+      </section>
       <section className="member-panel">
         <div className="panel-head">
           <div>

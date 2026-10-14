@@ -25,7 +25,7 @@ export async function POST(request:Request){
  try{
   const v=await request.json() as Record<string,unknown>,db=env.DB,now=new Date().toISOString();
   const action=clean(v.action,40);
-  const allowed:Record<string,string[]>={membership:["review","expiry-settings"],operations:["fixture","fixture-update","result","standing","standing-delete","update"],coach:["player","player-delete"],executive:["review","expiry-settings","fixture","fixture-update","result","standing","standing-delete","update","player","player-delete"]};
+  const allowed:Record<string,string[]>={membership:["review","expiry-settings"],operations:["fixture","fixture-update","result","standing","standing-delete"],coach:["player","player-delete"],executive:["review","expiry-settings","fixture","fixture-update","result","standing","standing-delete","player","player-delete"]};
   if(!allowed[admin.role]?.includes(action))return error("Your administrator role cannot perform this action.",403);
   if(v.action==="review"){
    const id=clean(v.id,60),status=clean(v.status,20),note=clean(v.note,300);
@@ -77,12 +77,6 @@ export async function POST(request:Request){
    if(!team)return error("Choose a team to delete.");
    const result=await db.prepare("DELETE FROM standings WHERE team=?").bind(team).run();
    return result.meta.changes?Response.json({ok:true}):error("Team not found.",404);
-  }
-  if(v.action==="update"){
-   const title=clean(v.title,150),body=clean(v.body,3000);
-   if(!title||!body)return error("Title and message are required.");
-   await db.prepare("INSERT INTO club_updates (title,body,created_at) VALUES (?,?,?)").bind(title,body,now).run();
-   return Response.json({ok:true});
   }
   if(v.action==="expiry-settings"){
    const validityDays=Number(v.membershipValidityDays),reminderDays=Number(v.expiryReminderDays);

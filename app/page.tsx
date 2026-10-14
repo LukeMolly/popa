@@ -12,7 +12,7 @@ export default async function PortalHome(){
    <div className="gateway-intro"><p className="eyebrow">JOIN THE POPA FAMILY</p>{user ? <><h2>Hi, {user.displayName.trim().split(" ")[0] || "Member"}</h2><p>Welcome to the Popa Popa ya Ipopa family.</p></> : <><h2>Welcome to POPA Membership</h2><p>Join the Township Rollers family by submitting your KYC information. After registration, contact the membership administrator on WhatsApp.</p></>}</div>
    <div className="gateway-grid">
     <article className="access-card member-access"><span className="access-number">01</span><h3>POPA KYC Registration</h3><p>Complete your KYC details without creating a member account. Then contact the membership admin on WhatsApp.</p><a href="/register">Start KYC Registration <span>→</span></a><small>No PIN or member login required.</small></article>
-    <article className="access-card admin-access"><span className="access-number">02</span><h3>Admin Login</h3><p>Review registrations and payments, activate memberships, manage cards, codes, fixtures and communications.</p><a href="/admin-login?return_to=/admin">Continue as administrator <span>→</span></a><small>Sign in with your authorised email and six-digit PIN.</small></article>
+    <article className="access-card admin-access"><span className="access-number">02</span><h3>Admin Login</h3><p>Review registrations and payments, activate memberships, manage cards, codes, fixtures and team records.</p><a href="/admin-login?return_to=/admin">Continue as administrator <span>→</span></a><small>Sign in with your authorised email and six-digit PIN.</small></article>
    </div>
   </section>
   <footer className="gateway-footer"><span>Township Rollers F.C. Membership</span></footer>
