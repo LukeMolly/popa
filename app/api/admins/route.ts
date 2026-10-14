@@ -1,6 +1,7 @@
 import { DB } from "../../../lib/platform";
 const env = { DB };
 import { getClubAdmin, hashAdminPin } from "../../admin-auth";
+import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
 export const dynamic = "force-dynamic";
 const ownerEmail = "botlhelucas@gmail.com";
 const clean = (value: unknown, max = 160) => typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -27,6 +28,7 @@ export async function GET() {
   }
 }
 export async function POST(request: Request) {
+  if (!isTrustedWrite(request)) return writeDenied();
   const current = await executive();
   if (!current) return fail("Executive administrator access required.", 403);
   try {

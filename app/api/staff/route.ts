@@ -1,6 +1,7 @@
 import { DB } from "../../../lib/platform";
 const env = { DB };
 import { getClubAdmin } from "../../admin-auth";
+import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
 export const dynamic="force-dynamic";
 const clean=(v:unknown,n=200)=>typeof v==="string"?v.trim().slice(0,n):"";
 const error=(message:string,status=400)=>Response.json({error:message},{status});
@@ -20,6 +21,7 @@ export async function GET(){
  }catch(e){console.error(e);return error("Club office data unavailable.",500)}
 }
 export async function POST(request:Request){
+ if (!isTrustedWrite(request)) return writeDenied();
  const admin=await getClubAdmin();
  if(!admin)return error("Administrator access required.",403);
  try{

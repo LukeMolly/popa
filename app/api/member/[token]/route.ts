@@ -1,6 +1,7 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../../lib/platform";
 const env = { DB };
 import { isClubAdmin } from "../../../admin-auth";
+import { isTrustedWrite, writeDenied } from "../../../../lib/request-security";
 export const dynamic="force-dynamic";
 type Context={params:Promise<{token:string}>};
 async function authorisedMember(token:string){
@@ -24,6 +25,7 @@ export async function GET(_request:Request,{params}:Context){
  }catch(e){console.error(e);return Response.json({error:"Membership unavailable."},{status:500})}
 }
 export async function POST(request:Request,{params}:Context){
+ if (!isTrustedWrite(request)) return writeDenied();
  try{
   const {token}=await params;
   const authorised=await authorisedMember(token);

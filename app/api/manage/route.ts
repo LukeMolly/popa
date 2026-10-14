@@ -1,10 +1,12 @@
 import { DB } from "../../../lib/platform";
 const env = { DB };
 import { isClubAdmin } from "../../admin-auth";
+import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
 export const dynamic = "force-dynamic";
 const clean = (x:unknown,n=200) => typeof x==="string" ? x.trim().slice(0,n) : "";
 const fail = (message:string,status=400) => Response.json({error:message},{status});
 export async function POST(request:Request) {
+  if (!isTrustedWrite(request)) return writeDenied();
   if (!(await isClubAdmin(["executive","membership"]))) return fail("Membership administrator access required.",403);
   try {
     const data = await request.json() as Record<string,unknown>, db=env.DB, now=new Date().toISOString();
