@@ -18,7 +18,6 @@ function Field({ label, children, hint }: { label: string; children: React.React
 export default function RegistrationPortal({ accountEmail }: { accountEmail: string }) {
   const dobRef = useRef<HTMLInputElement>(null);
   const [gender, setGender] = useState("");
-  const [documentType, setDocumentType] = useState<"omang" | "passport">("omang");
   const [localPhone, setLocalPhone] = useState("");
   const [proofName, setProofName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -45,16 +44,12 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
     e.preventDefault();
     if (!gender) { setError("Please select your gender."); return; }
     if (!/^[0-9]{8}$/.test(localPhone)) { setError("Enter exactly eight digits after +267."); return; }
-    if (documentType === "omang" && !/^[0-9]{9}$/.test(String(new FormData(e.currentTarget).get("idNumber") || "").trim())) {
-      setError("Omang must contain exactly nine digits."); return;
-    }
     if (paymentMethod === "other" && !paymentMethodDetail.trim()) { setError("Specify the other payment method."); return; }
     if (proofName && !paymentMethod) { setError("Choose the bank or payment method used for the attached POP."); return; }
     setBusy(true);
     setError("");
     const form = new FormData(e.currentTarget);
     form.set("gender", gender);
-    form.set("documentType", documentType);
     form.set("phone", localPhone);
     form.set("paymentMethod", paymentMethod);
     form.set("paymentMethodDetail", paymentMethodDetail);
@@ -143,16 +138,9 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
               </div>
               <div className="form-grid">
                 <Field label="Full name"><Input name="fullName" required minLength={3} maxLength={160} placeholder="First name and surname" autoComplete="name"/></Field>
-                <Field label="Identification type">
-                  <select className="document-type-select" name="documentType" value={documentType} onChange={e=>setDocumentType(e.target.value as "omang" | "passport")}>
-                    <option value="omang">Botswana Omang</option>
-                    <option value="passport">Passport</option>
-                  </select>
-                </Field>
-                <Field label={documentType==="omang"?"Omang number":"Passport number"} hint={documentType==="omang"?"Enter all 9 digits as printed on your Omang.":undefined}>
-                  <Input key={documentType} name="idNumber" required minLength={documentType==="omang"?9:5} maxLength={documentType==="omang"?9:30}
-                    pattern={documentType==="omang"?"[0-9]{9}":undefined} inputMode={documentType==="omang"?"numeric":"text"}
-                    placeholder={documentType==="omang"?"9-digit Omang number":"Passport number"} />
+                <Field label="Omang or Passport Number" hint="Enter your 9-digit Omang or passport number.">
+                  <Input name="idNumber" required minLength={5} maxLength={30}
+                    autoCapitalize="characters" placeholder="Omang or Passport Number" />
                 </Field>
                 <Field label="Date of birth" hint="Select your date from the calendar">
                   <div className="date-picker-field">

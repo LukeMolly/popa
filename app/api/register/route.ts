@@ -60,9 +60,9 @@ export async function POST(request: Request) {
 
     const fullName = String(form.get("fullName")).trim().replace(/\s+/g, " ");
     const idNumber = String(form.get("idNumber")).trim().toUpperCase();
-    const requestedDocumentType = String(form.get("documentType") || "").trim().toLowerCase();
-    // Legacy clients can omit documentType; modern forms make the distinction explicit.
-    const documentType = requestedDocumentType || (/^[0-9]{9}$/.test(idNumber) ? "omang" : "passport");
+    // Nine digits identify an Omang; other valid ID formats are treated as passports.
+    // The caller cannot bypass the Omang check by choosing a document type.
+    const documentType = /^[0-9]{9}$/.test(idNumber) ? "omang" : "passport";
     const dateOfBirth = String(form.get("dateOfBirth")).trim();
     const placeOfBirth = String(form.get("placeOfBirth")).trim().replace(/\s+/g, " ");
     const membershipLocation = String(form.get("membershipLocation")).trim();
@@ -74,9 +74,7 @@ export async function POST(request: Request) {
     const phoneDigits = "267" + localPhone;
 
     if (fullName.length < 3 || fullName.length > 160 || !fullName.includes(" ")) return fail("Enter your first name and surname.");
-    if (!["omang", "passport"].includes(documentType)) return fail("Choose Omang or passport.");
-    if (documentType === "omang" && !/^[0-9]{9}$/.test(idNumber)) return fail("Omang must contain exactly nine digits.");
-    if (documentType === "passport" && !/^[A-Za-z0-9][A-Za-z0-9/-]{4,29}$/.test(idNumber)) return fail("Enter a valid passport number.");
+    if (!/^[A-Za-z0-9][A-Za-z0-9/-]{4,29}$/.test(idNumber)) return fail("Enter a valid Omang or passport number.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return fail("Choose a valid date of birth.");
     const birthDate = new Date(dateOfBirth + "T00:00:00Z");
     const now = new Date();
