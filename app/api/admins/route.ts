@@ -38,6 +38,9 @@ export async function POST(request: Request) {
     if (email === ownerEmail) return fail("The Executive Access Administrator account is permanent.", 409);
     if (action === "delete") {
       const result = await env.DB.prepare("DELETE FROM admin_users WHERE email=?").bind(email).run();
+      if (result.meta.changes) {
+        await env.DB.prepare("DELETE FROM admin_sessions WHERE email=?").bind(email).run();
+      }
       return result.meta.changes ? Response.json({ ok: true }) : fail("Administrator not found.", 404);
     }
     if (action !== "save") return fail("Unknown action.");
@@ -48,6 +51,8 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
     const salt=crypto.randomUUID(),pinHash=await hashAdminPin(pin,salt);
     await env.DB.prepare("INSERT INTO admin_users (email,name,role,active,pin_salt,pin_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name,role=excluded.role,active=excluded.active,pin_salt=excluded.pin_salt,pin_hash=excluded.pin_hash,updated_at=excluded.updated_at").bind(email,name,role,active,salt,pinHash,now,now).run();
+    // A new PIN, role or deactivation invalidates existing admin cookies.
+    await env.DB.prepare("DELETE FROM admin_sessions WHERE email=?").bind(email).run();
     return Response.json({ ok: true });
   } catch (error) {
     console.error(error);

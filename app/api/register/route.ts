@@ -119,12 +119,13 @@ export async function POST(request: Request) {
 
     return Response.json({ membershipId, firstName, proofUploaded: hasProof }, { status: 201 });
   } catch (error) {
-    if (error instanceof RangeError) return fail("POP attachment and registration must be within the 5 MB upload limit.", 413);
-    if (error instanceof TypeError) return fail("Invalid registration form data.");
+    // Always clear orphaned private uploads, regardless of the error type.
     if (receiptUrl) {
       try { await deleteReceipt(receiptUrl); }
       catch (cleanupError) { console.error("Could not clean up unattached POP", cleanupError); }
     }
+    if (error instanceof RangeError) return fail("POP attachment and registration must be within the 5 MB upload limit.", 413);
+    if (error instanceof TypeError && !receiptUrl) return fail("Invalid registration form data.");
     console.error("KYC onboarding registration failed", error);
     const message = String(error).toLowerCase();
     if (message.includes("23505") || message.includes("duplicate key") || message.includes("unique constraint")) {
