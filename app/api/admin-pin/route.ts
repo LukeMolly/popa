@@ -14,7 +14,8 @@ export async function POST(request:Request){
   const admin=await env.DB.prepare("SELECT email,pin_salt AS pinSalt,pin_hash AS pinHash FROM admin_users WHERE email=? AND active=1").bind(email).first() as {email:string;pinSalt:string;pinHash:string}|null;
   const supplied=admin?await hashAdminPin(pin,admin.pinSalt):"";
   if(!admin||!admin.pinHash||supplied!==admin.pinHash){
-   const failed=(attempt?.failedCount||0)+1,lockedUntil=failed>=5?new Date(now.getTime()+15*60*1000).toISOString():"";
+   const previousLockExpired=!!attempt?.lockedUntil && attempt.lockedUntil<=now.toISOString();
+   const failed=(previousLockExpired?0:(attempt?.failedCount||0))+1,lockedUntil=failed>=5?new Date(now.getTime()+15*60*1000).toISOString():"";
    await env.DB.prepare("INSERT INTO admin_login_attempts (email,failed_count,locked_until,updated_at) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at").bind(email,failed,lockedUntil,now.toISOString()).run();
    return fail(failed>=5?"Too many incorrect attempts. Try again in 15 minutes.":"Email or PIN is incorrect.",401);
   }

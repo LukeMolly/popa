@@ -1,4 +1,4 @@
-import { getChatGPTUser } from "./chatgpt-auth";
+import { auth } from "../auth";
 import { DB } from "../lib/platform";
 const env = { DB };
 import { cookies } from "next/headers";
@@ -6,7 +6,6 @@ import { cookies } from "next/headers";
 export type ClubAdminRole = "executive" | "membership" | "operations" | "coach";
 export type ClubAdmin = { email: string; name: string; role: ClubAdminRole };
 export const ADMIN_SESSION_COOKIE = "tr_admin_session";
-const executiveEmail = "botlhelucas@gmail.com";
 export async function hashAdminSecret(value: string) {
   const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -17,11 +16,10 @@ export async function hashAdminPin(pin: string, salt: string) {
   return Array.from(new Uint8Array(bits), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 export async function getClubAdmin(): Promise<ClubAdmin | null> {
-  const user = await getChatGPTUser();
-  if (user) {
-    const email = user.email.toLowerCase();
-    if (email === executiveEmail)
-      return { email, name: user.fullName || user.displayName || "Botlhe Lucas", role: "executive" };
+  // No admin elevation from retired member sessions or an email-only owner bypass.
+  const googleSession = await auth();
+  const email = googleSession?.user?.email?.trim().toLowerCase();
+  if (email) {
     try {
       const row = await env.DB.prepare("SELECT email,name,role FROM admin_users WHERE email=? AND active=1").bind(email).first() as ClubAdmin | null;
       if (row && ["executive", "membership", "operations", "coach"].includes(row.role)) return row;
