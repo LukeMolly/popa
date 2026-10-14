@@ -234,7 +234,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
                 ["03", "Receive your ID and contact admin"]
               ].map(([number, title]) => <div className="step" key={number}><b>{number}</b><span>{title}</span></div>)}
             </div>
-            <div className="expiry-card"><MessageCircle/><div><small>MEMBERSHIP ADMIN</small><strong>{adminWhatsAppDisplay}</strong><span>Contact after submitting the form</span></div></div>
+            <a className="expiry-card membership-admin-whatsapp" href={"https://wa.me/" + adminWhatsApp} target="_blank" rel="noopener noreferrer" aria-label={"Chat with Township Rollers Membership Admin on WhatsApp at " + adminWhatsAppDisplay}><MessageCircle/><div><small>MEMBERSHIP ADMIN</small><strong>{adminWhatsAppDisplay}</strong><span>Click to chat on WhatsApp</span></div></a>
           </aside>
         </div>
       </>

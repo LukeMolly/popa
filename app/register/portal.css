@@ -20,3 +20,8 @@
 .bank-account-details p{margin:7px 0;font-size:.88rem;line-height:1.4}
 .bank-account-details span{font-weight:900;font-size:1.05rem;overflow-wrap:anywhere}
 @media(max-width:520px){.bank-option-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bank-option{min-height:100px;padding:8px}}
+
+/* Make the member onboarding WhatsApp contact card a keyboard-accessible link. */
+.membership-admin-whatsapp{text-decoration:none;color:#07162f;cursor:pointer}
+.membership-admin-whatsapp:hover{text-decoration:none;background:#f5c51a}
+.membership-admin-whatsapp:focus-visible{outline:3px solid #0755d9;outline-offset:3px}
