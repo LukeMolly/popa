@@ -30,7 +30,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   const selectedBank = PAYMENT_METHODS.find(method => method.code === paymentMethod);
   const whatsAppLink = "https://wa.me/" + adminWhatsApp + "?text=" + encodeURIComponent(
     "Hello Township Rollers Membership Admin, my name is " + (result?.firstName ?? "") +
-    ". My Township Rollers F.C. KYC registration was saved successfully. Membership ID: " +
+    ". My Township Rollers F.C. membership registration was submitted successfully. Membership ID: " +
     (result?.membershipId ?? "") + ". Please assist with my membership status or enquiry."
   );
 
@@ -76,7 +76,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   return <main className="portal-shell">
     <header className="topbar">
       <a className="brand" href="/" aria-label="Township Rollers home">
-        <ClubLogo/><span><strong>Township Rollers</strong><small>Member Onboarding</small></span>
+        <ClubLogo/><span><strong>Township Rollers</strong><small>Membership Registration</small></span>
       </a>
       <a href="/">Home</a>
     </header>
@@ -87,7 +87,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
           <CheckCircle2 size={56} color="#15803d" aria-hidden="true"/>
           <span className="eyebrow" style={{ display: "block", marginTop: 14 }}>REGISTRATION SUBMITTED</span>
           <h1>Hello {result.firstName},</h1>
-          <p>Your Township Rollers F.C. KYC information has been sent and saved successfully. The membership administration team will review your details.</p>
+          <p>Your Township Rollers F.C. membership registration has been submitted successfully. The membership administration team will review your details.</p>
           <p><strong>Membership ID: {result.membershipId}</strong></p>
           {result.proofUploaded
             ? <p><CheckCircle2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }} aria-hidden="true"/>Your proof of payment has been attached and is awaiting admin review.</p>
@@ -110,18 +110,18 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
           <div className="hero-copy">
             <p>POPA POPA EA IPOPA</p>
             <h1>Your club.<br/>Your membership.</h1>
-            <span>Complete your KYC details to register with Township Rollers F.C.</span>
+            <span>Complete your membership registration with Township Rollers F.C.</span>
           </div>
         </section>
         <div className="workspace content-grid">
           <section className="panel form-panel">
             <div className="section-heading">
               <div>
-                <span className="eyebrow">MEMBER ONBOARDING</span>
-                <h2>Complete your KYC registration</h2>
+                <span className="eyebrow">MEMBERSHIP REGISTRATION</span>
+                <h2>Complete your membership registration</h2>
                 <p>Provide your details as shown on your identity document. You do not need to create an account or password.</p>
               </div>
-              <span className="secure"><ShieldCheck/> KYC protected</span>
+              <span className="secure"><ShieldCheck/> Registration protected</span>
             </div>
             <form onSubmit={submit}>
               <div className="kyc-honeypot" aria-hidden="true">
@@ -251,10 +251,10 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
               </div>
               {error && <p className="error" role="alert">{error}</p>}
               <label className="consent">
-                <input required type="checkbox"/> I confirm that these details are accurate and consent to their use for membership onboarding and contact by the club administration.
+                <input required type="checkbox"/> I confirm that these details are accurate and consent to their use for membership registration and contact by the club administration.
               </label>
               <Button type="submit" size="lg" className="submit-button" disabled={busy}>
-                {busy ? "Submitting KYC…" : "Submit KYC registration"}<ChevronRight/>
+                {busy ? "Submitting registration…" : "Submit membership registration"}<ChevronRight/>
               </Button>
             </form>
           </section>
@@ -262,7 +262,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
             <div className="dark-card">
               <span className="eyebrow gold">WHAT HAPPENS NEXT</span>
               {[
-                ["01", "Complete KYC and choose how to pay"],
+                ["01", "Register and choose how to pay"],
                 ["02", "Optionally upload your POP"],
                 ["03", "Receive your ID and contact admin"]
               ].map(([number, title]) => <div className="step" key={number}><b>{number}</b><span>{title}</span></div>)}

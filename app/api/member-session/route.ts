@@ -5,7 +5,7 @@ import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
 
 // No new or existing member account can be used to sign in to the public site.
 export async function POST() {
-  return Response.json({ error: "Member login has been retired. Please use the KYC registration form or contact the membership admin." }, { status: 410 });
+  return Response.json({ error: "Member login has been retired. Please use the membership registration form or contact the membership admin." }, { status: 410 });
 }
 
 export async function DELETE(request: Request) {

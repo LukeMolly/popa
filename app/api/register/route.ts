@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     const membershipId = "TRFC-" + crypto.randomUUID().slice(0, 8).toUpperCase();
     const token = crypto.randomUUID();
 
-    // KYC registration stays account-free and pending. Payments use the existing
+    // Membership registration stays account-free and pending. Payments use the existing
     // admin-visible table. Pay-later members are not counted as submitted payments.
     const insertMember =
       "INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender,risk_status,risk_reasons) " +
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
         receiptUrl = await uploadReceipt("payment-proofs/kyc/" + membershipId + "/" + filename, proofBuffer, proof.type);
       }
       const note = "Payment method: " + paymentMethodLabel(paymentMethod, paymentMethodDetail) +
-        "; POP: " + (hasProof ? "attached during KYC onboarding" : "awaiting proof from member");
+        "; POP: " + (hasProof ? "attached during membership registration" : "awaiting proof from member");
       // One SQL statement guarantees the member and payment enter the admin tally together.
       await DB.prepare(
         "WITH member_insert AS (" + insertMember + " RETURNING id) " +
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
     }
     if (error instanceof RangeError) return fail("POP attachment and registration must be within the 5 MB upload limit.", 413);
     if (error instanceof TypeError && !receiptUrl) return fail("Invalid registration form data.");
-    console.error("KYC onboarding registration failed", error);
+    console.error("Membership registration failed", error);
     const message = String(error).toLowerCase();
     if (message.includes("23505") || message.includes("duplicate key") || message.includes("unique constraint")) {
       return fail("This email address or Omang/passport number is already registered. Please contact the membership admin on WhatsApp.", 409);
