@@ -140,7 +140,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
         {canMembership ? <Link href="/admin">← Member registry</Link> : <span />}
         {role === "executive" && <a className="executive-admin-button" href="/admin-access">Manage administrators →</a>}
         
-        <button className="admin-signout" onClick={async()=>{try{const response=await fetch("/api/admin-pin",{method:"DELETE"});if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||"Could not sign out.");}location.assign("/");}catch(signOutError){setError(signOutError instanceof Error?signOutError.message:"Could not sign out.");}}}>Sign out</button>
+        <button className="admin-signout" onClick={()=>location.assign("/admin-signout")}>Sign out</button>
       </div>
       <div className="member-heading">
         <div>
