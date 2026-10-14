@@ -74,24 +74,35 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
     </header>
 
     {result ? (
-      <section className="workspace" style={{ maxWidth: 760, margin: "36px auto 80px", padding: "0 18px" }} aria-live="polite">
-        <div className="panel status-panel" style={{ textAlign: "center", padding: "44px 28px" }}>
-          <CheckCircle2 size={56} color="#15803d" aria-hidden="true"/>
-          <span className="eyebrow" style={{ display: "block", marginTop: 14 }}>REGISTRATION SUBMITTED</span>
-          <h1>Hello {result.firstName},</h1>
-          <p>Your Township Rollers F.C. KYC information has been sent and saved successfully. The membership administration team will review your details.</p>
-          <p><strong>Membership ID: {result.membershipId}</strong></p>
-          {result.proofUploaded
-            ? <p><CheckCircle2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }} aria-hidden="true"/>Your proof of payment has been attached and is awaiting admin review.</p>
-            : paymentMethod
-              ? <p>Your payment method has been recorded. Please send your POP to the membership administrator for verification.</p>
-              : <p>No payment was recorded. You may contact the administrator for payment guidance.</p>}
-          <p>For your membership status and all inquiries, contact the membership administrator on WhatsApp at <strong>{adminWhatsAppDisplay}</strong>. Please provide your membership ID when contacting the administrator.</p>
-          <a className="submit-button" href={whatsAppLink} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, textDecoration: "none", marginTop: 16, padding: "14px 22px" }}>
-            <MessageCircle size={20}/> Contact admin on WhatsApp
+      <section className="workspace" style={{ maxWidth: 600, margin: "28px auto 64px", padding: "0 16px" }} aria-live="polite">
+        <div className="panel status-panel" style={{ padding: "clamp(24px, 5vw, 40px)", borderRadius: 22 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+            <ClubLogo/>
+            <div><strong style={{ display: "block", fontSize: 16 }}>TOWNSHIP ROLLERS F.C.</strong><span style={{ color: "#64748b", fontSize: 13 }}>Official Membership Registration</span></div>
+          </div>
+          <div style={{ height: 1, background: "#e2e8f0", marginBottom: 28 }}/>
+          <div style={{ textAlign: "center" }}>
+            <CheckCircle2 size={52} color="#15803d" aria-hidden="true"/>
+            <h1 style={{ fontSize: "clamp(24px, 5vw, 30px)", lineHeight: 1.2, margin: "16px 0 10px" }}>Registration Successful!</h1>
+            <p style={{ fontSize: 15, lineHeight: 1.6, color: "#64748b", margin: "0 0 22px" }}>Thank you, {result.firstName}. Your registration has been received and is awaiting review.</p>
+          </div>
+          <div style={{ background: "#f1f5f9", borderRadius: 14, padding: "18px 12px", textAlign: "center", marginBottom: 24 }}>
+            <span style={{ display: "block", color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 1.3 }}>YOUR MEMBERSHIP ID</span>
+            <strong style={{ display: "block", margin: "8px 0", fontSize: "clamp(18px, 4.5vw, 23px)", overflowWrap: "anywhere" }}>{result.membershipId}</strong>
+            <span style={{ display: "inline-block", borderRadius: 20, background: "#fef3c7", color: "#92400e", padding: "5px 12px", fontSize: 12, fontWeight: 700 }}>Pending Review</span>
+          </div>
+          <div style={{ marginBottom: 22 }}>
+            <strong style={{ display: "block", marginBottom: 6 }}>Next step</strong>
+            <p style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6, margin: 0 }}>{result.proofUploaded
+              ? "Your proof of payment has been received and is awaiting verification."
+              : paymentMethod
+                ? "Your payment method has been recorded. Please send your proof of payment to Membership Administration."
+                : "If you have not submitted proof of payment, please contact Membership Administration for assistance."}</p>
+          </div>
+          <a href={whatsAppLink} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", boxSizing: "border-box", padding: "15px 14px", background: "#0759c9", color: "#ffffff", borderRadius: 12, textDecoration: "none", fontSize: 14, fontWeight: 700, textAlign: "center" }}>
+            <MessageCircle size={20} aria-hidden="true"/> Contact Membership Administration
           </a>
-          <p style={{ marginTop: 18 }}>No member account or login is required.</p>
-          <a href="/" style={{ display: "inline-block", marginTop: 8 }}>Return to home</a>
+          <a href="/" style={{ display: "block", textAlign: "center", marginTop: 22, fontSize: 14, fontWeight: 600, textDecoration: "none" }}>Return to Homepage</a>
         </div>
       </section>
     ) : (
