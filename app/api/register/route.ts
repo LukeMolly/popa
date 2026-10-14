@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       await DB.prepare(insertMember).bind(...memberArgs).run();
     }
 
-    return Response.json({ membershipId, proofUploaded: hasProof }, { status: 201 });
+    return Response.json({ membershipId, firstName, proofUploaded: hasProof }, { status: 201 });
   } catch (error) {
     if (receiptUrl) {
       try { await deleteReceipt(receiptUrl); }

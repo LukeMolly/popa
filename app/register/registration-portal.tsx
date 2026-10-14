@@ -19,12 +19,13 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   const [gender, setGender] = useState("");
   const [proofName, setProofName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ membershipId: string; proofUploaded: boolean } | null>(null);
+  const [result, setResult] = useState<{ membershipId: string; firstName: string; proofUploaded: boolean } | null>(null);
   const [error, setError] = useState("");
   const latestBirthDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const whatsAppLink = "https://wa.me/" + adminWhatsApp + "?text=" + encodeURIComponent(
-    "Hello Township Rollers Membership Admin, I have submitted my KYC registration. Reference: " +
-    (result?.membershipId ?? "") + ". Please assist with the next steps."
+    "Hello Township Rollers Membership Admin, my name is " + (result?.firstName ?? "") +
+    ". My Township Rollers F.C. KYC registration was saved successfully. Membership ID: " +
+    (result?.membershipId ?? "") + ". Please assist with my membership status or enquiry."
   );
 
   function openDatePicker() {
@@ -43,11 +44,11 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
     form.set("gender", gender);
     try {
       const response = await fetch("/api/register", { method: "POST", body: form });
-      const data = await response.json() as { membershipId?: string; proofUploaded?: boolean; error?: string };
+      const data = await response.json() as { membershipId?: string; firstName?: string; proofUploaded?: boolean; error?: string };
       if (!response.ok || !data.membershipId) {
         throw new Error(data.error || "Registration could not be completed.");
       }
-      setResult({ membershipId: data.membershipId, proofUploaded: Boolean(data.proofUploaded) });
+      setResult({ membershipId: data.membershipId, firstName: data.firstName || String(form.get("fullName") || "").trim().split(/\s+/)[0] || "Member", proofUploaded: Boolean(data.proofUploaded) });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration could not be completed.");
@@ -69,13 +70,13 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
         <div className="panel status-panel" style={{ textAlign: "center", padding: "44px 28px" }}>
           <CheckCircle2 size={56} color="#15803d" aria-hidden="true"/>
           <span className="eyebrow" style={{ display: "block", marginTop: 14 }}>REGISTRATION SUBMITTED</span>
-          <h1>Thank you for registering!</h1>
-          <p>Your Township Rollers F.C. KYC information has been received and saved successfully. The membership administration team will review your details.</p>
-          <p>Your registration reference is <strong>{result.membershipId}</strong>.</p>
+          <h1>Hello {result.firstName},</h1>
+          <p>Your Township Rollers F.C. KYC information has been sent and saved successfully. The membership administration team will review your details.</p>
+          <p><strong>Membership ID: {result.membershipId}</strong></p>
           {result.proofUploaded
             ? <p><CheckCircle2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }} aria-hidden="true"/>Your proof of payment has been attached and is awaiting admin review.</p>
             : <p>No proof of payment was attached. You may contact the administrator for payment guidance.</p>}
-          <p>For the next steps, please contact the membership administrator on WhatsApp at <strong>{adminWhatsAppDisplay}</strong> and include your reference.</p>
+          <p>For your membership status and all inquiries, contact the membership administrator on WhatsApp at <strong>{adminWhatsAppDisplay}</strong>. Please provide your membership ID when contacting the administrator.</p>
           <a className="submit-button" href={whatsAppLink} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, textDecoration: "none", marginTop: 16, padding: "14px 22px" }}>
             <MessageCircle size={20}/> Contact admin on WhatsApp
           </a>
