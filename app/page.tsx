@@ -1,32 +1,47 @@
-import {ClubLogo} from "./components/club-logo";
-import {getClubAdmin} from "./admin-auth";
+import { ClubLogo } from "./components/club-logo";
+import { getClubAdmin } from "./admin-auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function PortalHome(){
- const admin = await getClubAdmin();
- const firstName = admin?.name?.trim().split(/\s+/)[0] || "Administrator";
- return <main className="gateway-page">
-  <header className="gateway-header"><a href="/" className="gateway-brand"><ClubLogo/><span><strong>Township Rollers F.C.</strong><small>Membership Registration</small></span></a></header>
-  <section className="gateway-hero"><img src="/township-rollers-team.jpeg" alt="Township Rollers players in club colours"/><div className="gateway-overlay"/><div className="gateway-copy"><p>POPA POPA EA IPOPA</p><h1>One club.<br/>One membership platform.</h1><span>Register your membership and connect with the club administration.</span></div></section>
-  <section className="gateway-actions">
-   {admin ? (
-    <div className="gateway-greeting">
-     <span className="gateway-greeting-mark"><ClubLogo className="gateway-greeting-crest"/></span>
-     <div className="gateway-greeting-copy">
-      <p className="gateway-greeting-label">POPA MEMBERSHIP</p>
-      <h2>Hi, <span>{firstName}</span><span aria-hidden="true" className="gateway-greeting-wave"> 👋</span></h2>
-      <p>Welcome back to POPA.</p>
-     </div>
-    </div>
-   ) : (
-    <div className="gateway-intro"><p className="eyebrow">JOIN THE POPA FAMILY</p><h2>Welcome to POPA Membership</h2><p>Join the Township Rollers family by completing your membership registration. Our membership administrator is available on WhatsApp.</p></div>
-   )}
-   <div className="gateway-grid">
-    <article className="access-card member-access"><span className="access-number">01</span><h3>POPA Membership Registration</h3><p>Complete your registration details and send them to the membership office.</p><a href="/register">Register for Membership <span>→</span></a><small>2026–2027 season membership</small></article>
-    <article className="access-card admin-access"><span className="access-number">02</span><h3>Admin Login</h3><p>Review registrations, verify payments and manage club memberships.</p><a href="/admin-login?return_to=/admin">Continue as administrator <span>→</span></a><small>For authorised club officials.</small></article>
-   </div>
-  </section>
-  <footer className="gateway-footer"><span>Township Rollers F.C. Membership</span></footer>
- </main>
+export default async function PortalHome() {
+  const admin = await getClubAdmin();
+  const firstName = admin?.name?.trim().split(/\s+/)[0] || "Administrator";
+
+  return (
+    <main className="welcome-screen">
+      <section className="welcome-card" aria-labelledby="welcome-title">
+        <div className="welcome-crest">
+          <ClubLogo className="welcome-club-logo" />
+        </div>
+        <p className="welcome-club-name">TOWNSHIP ROLLERS F.C.</p>
+        <p className="welcome-motto">POPA POPA EA IPOPA</p>
+
+        {admin ? (
+          <>
+            <h1 id="welcome-title">Hi, <span>{firstName}</span><span aria-hidden="true"> 👋</span></h1>
+            <p className="welcome-description">Welcome back to POPA.</p>
+          </>
+        ) : (
+          <>
+            <h1 id="welcome-title">Welcome to <span>POPA.</span></h1>
+            <p className="welcome-description">Your club. Your membership.</p>
+          </>
+        )}
+
+        <div className="welcome-season"><span>2026–2027 MEMBERSHIP</span></div>
+
+        <nav className="welcome-actions" aria-label="Membership access">
+          <a className="welcome-action welcome-action-primary" href="/register">
+            <span>Membership Registration</span><span aria-hidden="true">→</span>
+          </a>
+          <a className="welcome-action welcome-action-secondary" href="/admin-login?return_to=/admin">
+            <span>Administrator Login</span><span aria-hidden="true">→</span>
+          </a>
+        </nav>
+
+        <p className="welcome-card-footer">Official Township Rollers membership portal</p>
+      </section>
+      <p className="welcome-outer-footer">Township Rollers F.C. · Botswana</p>
+    </main>
+  );
 }
