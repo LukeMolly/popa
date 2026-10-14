@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const db = env.DB;
     const [m,p,n] = await Promise.all([
-      db.prepare("SELECT id, first_name AS firstName, last_name AS lastName, phone, email, status, expires_at AS expiresAt, token, created_at AS createdAt FROM members ORDER BY created_at DESC").all(),
+      db.prepare("SELECT id, first_name AS firstName, last_name AS lastName, phone, email, status, expires_at AS expiresAt, token, created_at AS createdAt,risk_status AS riskStatus,risk_reasons AS riskReasons,risk_reviewed_at AS riskReviewedAt,risk_reviewed_by AS riskReviewedBy FROM members ORDER BY created_at DESC").all(),
       db.prepare("SELECT code, campaign, member_id AS memberId, status, created_at AS createdAt FROM promos ORDER BY created_at DESC").all(),
       db.prepare("SELECT id,member_id AS memberId,title,body,reply,replied_at AS repliedAt,created_at AS createdAt FROM member_notifications ORDER BY created_at DESC").all(),
     ]);

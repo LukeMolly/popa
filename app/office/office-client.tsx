@@ -5,6 +5,7 @@ import Link from "next/link";
 type Payment = {
   id: string;
   memberId: string;
+  riskStatus: string;
   firstName: string;
   lastName: string;
   amount: number;
@@ -203,7 +204,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
                       {p.firstName} {p.lastName}
                     </b>
                     <br />
-                    <small>{p.memberId}</small>
+                    <small>{p.memberId}</small>{['flagged','confirmed'].includes(p.riskStatus)&&<span className="member-risk-badge">Review required</span>}
                   </td>
                   <td>{new Date(p.createdAt).toLocaleString("en-BW")}</td>
                   <td>{pula(Number(p.amount)||0)}</td>
@@ -219,7 +220,8 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
                     {p.status === "submitted" ? (
                       <div className="office-actions">
                         <button
-                          disabled={busy}
+                          disabled={busy || ["flagged","confirmed"].includes(p.riskStatus)}
+                          title={["flagged","confirmed"].includes(p.riskStatus)?"Clear registration flag before approval.":"Approve payment"}
                           className="primary"
                           onClick={() =>
                             void save({

@@ -1,7 +1,7 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../lib/platform";
 import { PAYMENT_METHOD_CODES, paymentMethodLabel } from "../../../lib/payment-methods";
 import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
-import { isRegistrationRateAllowed, readLimitedRegistrationForm } from "../../../lib/registration-security";
+import { checkRegistrationRate, isPhoneRegistrationRateAllowed, readLimitedRegistrationForm } from "../../../lib/registration-security";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +21,17 @@ export async function POST(request: Request) {
   if (!isTrustedWrite(request)) return writeDenied();
   let receiptUrl = "";
   try {
-    if (!(await isRegistrationRateAllowed(request))) {
+    const assessment = await checkRegistrationRate(request);
+    if (!assessment.allowed) {
       return Response.json({ error: "Too many registration attempts. Please try again later." }, {
         status: 429, headers: { "Retry-After": "3600", "Cache-Control": "no-store" },
       });
     }
     const form = await readLimitedRegistrationForm(request);
+    // An off-screen field traps basic automated form fillers without changing the visible UX.
+    if (String(form.get("companyWebsite") || "").trim()) {
+      return fail("Registration could not be submitted. Please retry.",400);
+    }
     const paymentMethod = String(form.get("paymentMethod") || "").trim().toLowerCase();
     const paymentMethodDetail = String(form.get("paymentMethodDetail") || "").trim().slice(0, 120);
     const reference = String(form.get("reference") || "").trim().slice(0, 100);
@@ -55,13 +60,18 @@ export async function POST(request: Request) {
 
     const fullName = String(form.get("fullName")).trim().replace(/\s+/g, " ");
     const idNumber = String(form.get("idNumber")).trim().toUpperCase();
+    // Nine digits identify an Omang; other valid ID formats are treated as passports.
+    // The caller cannot bypass the Omang check by choosing a document type.
+    const documentType = /^[0-9]{9}$/.test(idNumber) ? "omang" : "passport";
     const dateOfBirth = String(form.get("dateOfBirth")).trim();
     const placeOfBirth = String(form.get("placeOfBirth")).trim().replace(/\s+/g, " ");
     const membershipLocation = String(form.get("membershipLocation")).trim();
     const gender = String(form.get("gender")).trim().toLowerCase();
     const email = String(form.get("email")).trim().toLowerCase();
-    const phone = String(form.get("phone")).trim().replace(/\s+/g, " ");
-    const phoneDigits = phone.replace(/\D/g, "");
+    // The form submits exactly eight national digits; +267 is supplied by the server.
+    const localPhone = String(form.get("phone") || "").trim();
+    const phone = "+267" + localPhone;
+    const phoneDigits = "267" + localPhone;
 
     if (fullName.length < 3 || fullName.length > 160 || !fullName.includes(" ")) return fail("Enter your first name and surname.");
     if (!/^[A-Za-z0-9][A-Za-z0-9/-]{4,29}$/.test(idNumber)) return fail("Enter a valid Omang or passport number.");
@@ -74,7 +84,26 @@ export async function POST(request: Request) {
     if (membershipLocation.length < 2 || membershipLocation.length > 100) return fail("Enter a valid membership location.");
     if (!["female", "male", "other"].includes(gender)) return fail("Choose a valid gender.");
     if (email.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Enter a valid email address.");
-    if (!/^\+?[0-9\s-]+$/.test(phone) || phoneDigits.length < 7 || phoneDigits.length > 15) return fail("Enter a valid mobile number, including its country code.");
+    if (!/^[0-9]{8}$/.test(localPhone)) return fail("Enter exactly eight digits for your Botswana mobile number.");
+    if (!(await isPhoneRegistrationRateAllowed(phoneDigits))) {
+      return Response.json({error:"Too many recent attempts using this mobile number. Please contact the membership administrator."},{
+        status:429,headers:{"Retry-After":"86400","Cache-Control":"no-store"}
+      });
+    }
+    const duplicatePhone = await DB.prepare(
+      "SELECT COUNT(*)::int AS count FROM members WHERE regexp_replace(phone,'[^0-9]','','g') IN (?,?)"
+    ).bind(localPhone,phoneDigits).first() as {count:number}|null;
+    const riskReasons:string[] = [];
+    if (Number(duplicatePhone?.count ?? 0)>0) riskReasons.push("Phone number shared with another registration");
+    if (assessment.ipAttempts>=10) riskReasons.push("Unusually rapid submissions from one network");
+    if (/^(?:test|testing|fake|dummy|asdf|qwerty)(?:\s|$)/i.test(fullName)) riskReasons.push("Placeholder-style name");
+    // Omang encodes sex in its fifth digit: 1 male, 2 female.
+    // Passport numbers are not assessed; 'other' is explicitly exempt.
+    if (documentType === "omang" && gender !== "other" &&
+        idNumber[4] !== (gender === "female" ? "2" : "1")) {
+      riskReasons.push("Omang fifth digit does not match the selected gender");
+    }
+    const riskStatus=riskReasons.length?"flagged":"none";
 
     const parts = fullName.split(" ");
     const firstName = parts.shift() || fullName;
@@ -82,14 +111,14 @@ export async function POST(request: Request) {
     const membershipId = "TRFC-" + crypto.randomUUID().slice(0, 8).toUpperCase();
     const token = crypto.randomUUID();
 
-    // KYC registration stays account-free and pending. Payments use the existing
+    // Membership registration stays account-free and pending. Payments use the existing
     // admin-visible table. Pay-later members are not counted as submitted payments.
     const insertMember =
-      "INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender) " +
-      "VALUES (?,?,?,?,?,'pending','',?,?,?,?,?,?,?)";
+      "INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender,risk_status,risk_reasons) " +
+      "VALUES (?,?,?,?,?,'pending','',?,?,?,?,?,?,?,?,?)";
     const memberArgs = [
       membershipId, firstName, lastName, phone, email, token, now.toISOString(),
-      idNumber, dateOfBirth, placeOfBirth, membershipLocation, gender
+      idNumber, dateOfBirth, placeOfBirth, membershipLocation, gender, riskStatus, riskReasons.join("; ")
     ];
 
     if (paymentMethod) {
@@ -102,7 +131,7 @@ export async function POST(request: Request) {
         receiptUrl = await uploadReceipt("payment-proofs/kyc/" + membershipId + "/" + filename, proofBuffer, proof.type);
       }
       const note = "Payment method: " + paymentMethodLabel(paymentMethod, paymentMethodDetail) +
-        "; POP: " + (hasProof ? "attached during KYC onboarding" : "awaiting proof from member");
+        "; POP: " + (hasProof ? "attached during membership registration" : "awaiting proof from member");
       // One SQL statement guarantees the member and payment enter the admin tally together.
       await DB.prepare(
         "WITH member_insert AS (" + insertMember + " RETURNING id) " +
@@ -126,7 +155,7 @@ export async function POST(request: Request) {
     }
     if (error instanceof RangeError) return fail("POP attachment and registration must be within the 5 MB upload limit.", 413);
     if (error instanceof TypeError && !receiptUrl) return fail("Invalid registration form data.");
-    console.error("KYC onboarding registration failed", error);
+    console.error("Membership registration failed", error);
     const message = String(error).toLowerCase();
     if (message.includes("23505") || message.includes("duplicate key") || message.includes("unique constraint")) {
       return fail("This email address or Omang/passport number is already registered. Please contact the membership admin on WhatsApp.", 409);

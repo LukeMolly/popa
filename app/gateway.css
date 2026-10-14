@@ -46,3 +46,25 @@
 .gateway-greeting-mark{overflow:hidden}
 .gateway-greeting-mark .gateway-greeting-crest{display:block;width:46px;height:46px;object-fit:contain}
 @media(max-width:520px){.gateway-greeting-mark .gateway-greeting-crest{width:37px;height:37px}}
+
+/* Landing and sign-out surfaces at narrow phone widths and desktop zoom. */
+.gateway-page,.admin-signout-page{min-width:0;overflow-x:clip}
+.gateway-grid>*{min-width:0}
+.gateway-copy{max-width:min(680px,calc(100vw - 40px))}
+.gateway-copy h1{overflow-wrap:anywhere}
+.access-card{min-width:0}
+.access-card>a{overflow-wrap:anywhere}
+@media(max-width:600px){
+ .gateway-hero{min-height:320px;height:auto;aspect-ratio:1.15}
+ .gateway-copy{top:12%;right:18px;left:18px}
+ .gateway-copy h1{font-size:clamp(1.9rem,8.5vw,2.7rem);line-height:1}
+ .gateway-grid{grid-template-columns:minmax(0,1fr)}
+ .gateway-greeting{min-width:0}
+ .admin-signout-card{width:100%;max-width:480px;padding:27px 18px}
+}
+@media(max-width:360px){
+ .gateway-copy h1{font-size:clamp(1.72rem,8vw,2.1rem)}
+ .gateway-actions{padding-inline:12px}
+ .access-card{padding:19px}
+ .admin-signout-page{padding:12px}
+}

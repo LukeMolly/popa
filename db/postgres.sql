@@ -21,3 +21,10 @@ INSERT INTO club_settings (id,membership_validity_days,expiry_reminder_days,upda
 
 -- Per-client throttling of public KYC submissions. Stores hashes, not raw IP addresses.
 CREATE TABLE IF NOT EXISTS registration_rate_limits (client_hash TEXT PRIMARY KEY, window_started TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0);
+
+-- Non-destructive registration review markers. Flagging does not activate or delete accounts.
+ALTER TABLE members ADD COLUMN IF NOT EXISTS risk_status TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE members ADD COLUMN IF NOT EXISTS risk_reasons TEXT NOT NULL DEFAULT '';
+ALTER TABLE members ADD COLUMN IF NOT EXISTS risk_reviewed_at TEXT NOT NULL DEFAULT '';
+ALTER TABLE members ADD COLUMN IF NOT EXISTS risk_reviewed_by TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_members_risk_status ON members (risk_status);

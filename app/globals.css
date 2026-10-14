@@ -42,3 +42,26 @@
 @media(max-width:740px){.member-content{padding:16px 14px calc(70px + env(safe-area-inset-bottom))}.member-header{flex-wrap:wrap}.member-header-actions{margin-left:auto}.member-tabs{padding:10px 14px;gap:8px}.member-tabs button{min-height:46px}.member-columns{gap:0}.member-panel{margin-bottom:14px}.member-panel .proof-form button{min-height:48px}.member-heading{flex-wrap:wrap;gap:10px}.member-heading h1{font-size:clamp(26px,7vw,36px)}.mobile-nav button{min-width:44px;min-height:44px}.office-actions{flex-wrap:wrap}}
 @media(max-width:420px){.member-panel{padding:15px}.member-header{padding:12px}.member-brand{min-width:0}.member-brand span{overflow-wrap:anywhere}.member-panel h2{font-size:19px}.payment-state{padding:12px}.member-tabs{gap:4px}.member-tabs button{padding:10px 12px}}
 @media(prefers-reduced-motion:reduce){.live-notification,.mobile-menu-sheet{animation:none!important}}
+
+/* Manual risk review on POPA member records and payment approvals. */
+.member-risk-badge{display:inline-flex;vertical-align:middle;margin:4px 0 4px 8px;border-radius:99px;padding:5px 9px;background:#fff0d5;color:#8c4d06;font-size:11px;font-weight:900}
+.member-risk-review{border-left:4px solid #e6a125;margin:14px 0 20px}
+.member-risk-review.cleared{border-left-color:#23835a}
+.member-risk-review.confirmed{border-left-color:#b74242}
+.member-risk-review .panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.member-risk-reasons{line-height:1.6;overflow-wrap:anywhere}
+.member-risk-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.member-risk-actions button{min-height:42px}
+
+/* Fraud review actions and office payment list remain usable on phones. */
+.member-risk-actions{min-width:0}
+.member-risk-actions button{touch-action:manipulation}
+@media(max-width:600px){
+ .member-risk-review .panel-head{align-items:flex-start;flex-direction:column}
+ .member-risk-actions{flex-direction:column}
+ .member-risk-actions button{width:100%;min-height:46px}
+ .office-page .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .office-page .office-actions{display:flex;flex-wrap:wrap;gap:8px}
+ .office-page .office-actions button{min-height:44px}
+ .member-risk-badge{max-width:100%;overflow-wrap:anywhere}
+}

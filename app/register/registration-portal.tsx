@@ -18,6 +18,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
 export default function RegistrationPortal({ accountEmail }: { accountEmail: string }) {
   const dobRef = useRef<HTMLInputElement>(null);
   const [gender, setGender] = useState("");
+  const [localPhone, setLocalPhone] = useState("");
   const [proofName, setProofName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentMethodDetail, setPaymentMethodDetail] = useState("");
@@ -27,9 +28,10 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   const latestBirthDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const selectedBank = PAYMENT_METHODS.find(method => method.code === paymentMethod);
   const whatsAppLink = "https://wa.me/" + adminWhatsApp + "?text=" + encodeURIComponent(
-    "Hello Township Rollers Membership Admin, my name is " + (result?.firstName ?? "") +
-    ". My Township Rollers F.C. KYC registration was saved successfully. Membership ID: " +
-    (result?.membershipId ?? "") + ". Please assist with my membership status or enquiry."
+    "Hi Admin\n\n" +
+    (result?.firstName ?? "") + " of " + (result?.membershipId ?? "") +
+    " has successfully registered and needs your verification.\n\n" +
+    "With regards,\n\nNew member"
   );
 
   function openDatePicker() {
@@ -42,12 +44,14 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!gender) { setError("Please select your gender."); return; }
+    if (!/^[0-9]{8}$/.test(localPhone)) { setError("Enter exactly eight digits after +267."); return; }
     if (paymentMethod === "other" && !paymentMethodDetail.trim()) { setError("Specify the other payment method."); return; }
     if (proofName && !paymentMethod) { setError("Choose the bank or payment method used for the attached POP."); return; }
     setBusy(true);
     setError("");
     const form = new FormData(e.currentTarget);
     form.set("gender", gender);
+    form.set("phone", localPhone);
     form.set("paymentMethod", paymentMethod);
     form.set("paymentMethodDetail", paymentMethodDetail);
     try {
@@ -68,31 +72,41 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   return <main className="portal-shell">
     <header className="topbar">
       <a className="brand" href="/" aria-label="Township Rollers home">
-        <ClubLogo/><span><strong>Township Rollers</strong><small>Member Onboarding</small></span>
+        <ClubLogo/><span><strong>Township Rollers</strong><small>Membership Registration</small></span>
       </a>
       <a href="/">Home</a>
     </header>
 
     {result ? (
-      <section className="workspace" style={{ maxWidth: 760, margin: "36px auto 80px", padding: "0 18px" }} aria-live="polite">
-        <div className="panel status-panel" style={{ textAlign: "center", padding: "44px 28px" }}>
-          <CheckCircle2 size={56} color="#15803d" aria-hidden="true"/>
-          <span className="eyebrow" style={{ display: "block", marginTop: 14 }}>REGISTRATION SUBMITTED</span>
-          <h1>Hello {result.firstName},</h1>
-          <p>Your Township Rollers F.C. KYC information has been sent and saved successfully. The membership administration team will review your details.</p>
-          <p><strong>Membership ID: {result.membershipId}</strong></p>
-          {result.proofUploaded
-            ? <p><CheckCircle2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }} aria-hidden="true"/>Your proof of payment has been attached and is awaiting admin review.</p>
-            : paymentMethod
-              ? <p>Your payment method has been recorded. Please send your POP to the membership administrator for verification.</p>
-              : <p>No payment was recorded. You may contact the administrator for payment guidance.</p>}
-          <p>For your membership status and all inquiries, contact the membership administrator on WhatsApp at <strong>{adminWhatsAppDisplay}</strong>. Please provide your membership ID when contacting the administrator.</p>
-          <a className="submit-button" href={whatsAppLink} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, textDecoration: "none", marginTop: 16, padding: "14px 22px" }}>
-            <MessageCircle size={20}/> Contact admin on WhatsApp
+      <section className="registration-complete-screen" aria-live="polite" aria-labelledby="registration-complete-title">
+        <div className="registration-complete-card">
+          <ClubLogo className="registration-complete-crest" />
+          <p className="registration-complete-club">TOWNSHIP ROLLERS F.C.</p>
+          <p className="registration-complete-motto">POPA POPA EA IPOPA</p>
+          <div className="registration-complete-check"><CheckCircle2 size={25} aria-hidden="true" /></div>
+          <p className="registration-complete-label">REGISTRATION RECEIVED</p>
+          <h1 id="registration-complete-title">Thank you, <span>{result.firstName}!</span></h1>
+          <p className="registration-complete-intro">Your membership registration has been received for review.</p>
+          <div className="registration-complete-id">
+            <span>YOUR MEMBERSHIP ID</span>
+            <strong>{result.membershipId}</strong>
+          </div>
+          <div className="registration-complete-membership-status" role="status">
+            <span>MEMBERSHIP STATUS</span>
+            <strong>Pending</strong>
+          </div>
+          <a className="registration-complete-contact" href={whatsAppLink} target="_blank" rel="noopener noreferrer">
+            <MessageCircle size={19} aria-hidden="true" />
+            <span>Contact Membership Admin</span>
+            <span aria-hidden="true">→</span>
           </a>
-          <p style={{ marginTop: 18 }}>No member account or login is required.</p>
-          <a href="/" style={{ display: "inline-block", marginTop: 8 }}>Return to home</a>
+          <a className="registration-complete-home" href="/">Return to homepage</a>
+          <div className="registration-complete-welcome">
+            <strong>Welcome to POPA, {result.firstName}.</strong>
+            <span>Your club. Your membership.</span>
+          </div>
         </div>
+        <p className="registration-complete-bottom">Township Rollers F.C. · 2026–2027 season</p>
       </section>
     ) : (
       <>
@@ -102,23 +116,30 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
           <div className="hero-copy">
             <p>POPA POPA EA IPOPA</p>
             <h1>Your club.<br/>Your membership.</h1>
-            <span>Complete your KYC details to register with Township Rollers F.C.</span>
+            <span>Complete your membership registration with Township Rollers F.C.</span>
           </div>
         </section>
         <div className="workspace content-grid">
           <section className="panel form-panel">
             <div className="section-heading">
               <div>
-                <span className="eyebrow">MEMBER ONBOARDING</span>
-                <h2>Complete your KYC registration</h2>
+                <span className="eyebrow">MEMBERSHIP REGISTRATION</span>
+                <h2>Complete your membership registration</h2>
                 <p>Provide your details as shown on your identity document. You do not need to create an account or password.</p>
               </div>
-              <span className="secure"><ShieldCheck/> KYC protected</span>
+              <span className="secure"><ShieldCheck/> Registration protected</span>
             </div>
             <form onSubmit={submit}>
+              <div className="kyc-honeypot" aria-hidden="true">
+                <label htmlFor="companyWebsite">Company website</label>
+                <input id="companyWebsite" name="companyWebsite" tabIndex={-1} autoComplete="off" />
+              </div>
               <div className="form-grid">
                 <Field label="Full name"><Input name="fullName" required minLength={3} maxLength={160} placeholder="First name and surname" autoComplete="name"/></Field>
-                <Field label="Omang / Passport number"><Input name="idNumber" required minLength={5} maxLength={30} placeholder="Identity number"/></Field>
+                <Field label="Omang or Passport Number" hint="Enter your 9-digit Omang or passport number.">
+                  <Input name="idNumber" required minLength={5} maxLength={30}
+                    autoCapitalize="characters" placeholder="Omang or Passport Number" />
+                </Field>
                 <Field label="Date of birth" hint="Select your date from the calendar">
                   <div className="date-picker-field">
                     <Input ref={dobRef} name="dateOfBirth" required type="date" min="1906-01-01" max={latestBirthDate} autoComplete="bday"/>
@@ -127,7 +148,18 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
                 </Field>
                 <Field label="Place of birth"><Input name="placeOfBirth" required minLength={2} maxLength={120} placeholder="Town or village" autoComplete="address-level2"/></Field>
                 <Field label="Email address"><Input name="email" required type="email" maxLength={160} defaultValue={accountEmail} placeholder="name@example.com"/></Field>
-                <Field label="Mobile number" hint="Include country code, e.g. +267 7X XXX XXX"><Input name="phone" required type="tel" maxLength={20} placeholder="+267 7X XXX XXX" autoComplete="tel"/></Field>
+                <Field label="Mobile number" hint="Botswana (+267) · enter exactly 8 digits">
+                  <div className="phone-prefix-field">
+                    <span className="phone-prefix" aria-label="Fixed Botswana country code">+267</span>
+                    <Input name="phone" required type="tel" inputMode="numeric" pattern="[0-9]{8}"
+                      minLength={8} maxLength={8} autoComplete="tel-national" placeholder="7XXXXXXX"
+                      aria-label="Eight-digit Botswana mobile number" value={localPhone}
+                      onChange={e=>{
+                        const digits=e.target.value.replace(/\D/g,"");
+                        setLocalPhone(digits.length===11&&digits.startsWith("267")?digits.slice(3):digits.slice(0,8));
+                      }}/>
+                  </div>
+                </Field>
                 <Field label="Membership location"><Input name="membershipLocation" required maxLength={100} placeholder="Enter your branch or town"/></Field>
                 <Field label="Gender">
                   <RadioGroup value={gender} onValueChange={setGender} className="gender-row" required>
@@ -218,10 +250,10 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
               </div>
               {error && <p className="error" role="alert">{error}</p>}
               <label className="consent">
-                <input required type="checkbox"/> I confirm that these details are accurate and consent to their use for membership onboarding and contact by the club administration.
+                <input required type="checkbox"/> I confirm that these details are accurate and consent to their use for membership registration and contact by the club administration.
               </label>
               <Button type="submit" size="lg" className="submit-button" disabled={busy}>
-                {busy ? "Submitting KYC…" : "Submit KYC registration"}<ChevronRight/>
+                {busy ? "Submitting registration…" : "Submit membership registration"}<ChevronRight/>
               </Button>
             </form>
           </section>
@@ -229,7 +261,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
             <div className="dark-card">
               <span className="eyebrow gold">WHAT HAPPENS NEXT</span>
               {[
-                ["01", "Complete KYC and choose how to pay"],
+                ["01", "Register and choose how to pay"],
                 ["02", "Optionally upload your POP"],
                 ["03", "Receive your ID and contact admin"]
               ].map(([number, title]) => <div className="step" key={number}><b>{number}</b><span>{title}</span></div>)}
