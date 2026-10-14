@@ -2,26 +2,45 @@ import { DB } from "./platform";
 
 // Vercel sets x-vercel-forwarded-for at the platform boundary; do not trust
 // arbitrary client-controlled IP headers off-platform.
-export async function isRegistrationRateAllowed(request: Request): Promise<boolean> {
-  if (process.env.VERCEL !== "1") return true;
-  const ip = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim();
-  if (!ip) return true;
-  const pepper = process.env.AUTH_SECRET || process.env.POPA_RATE_LIMIT_SECRET || "";
-  const raw = new TextEncoder().encode("POPA registration:" + pepper + ":" + ip);
-  const hashed = await crypto.subtle.digest("SHA-256", raw);
-  const hash = Array.from(new Uint8Array(hashed), b => b.toString(16).padStart(2, "0")).join("");
+const rateLimitSecret = () => {
+  const secret = process.env.POPA_RATE_LIMIT_SECRET || process.env.AUTH_SECRET;
+  if (!secret) throw new Error("Registration rate-limit secret is not configured");
+  return secret;
+};
+
+async function rateLimit(scope: string, value: string, maxAttempts: number, windowHours: number) {
+  // HMAC conceals phone numbers and client IPs in the database.
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(rateLimitSecret()), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(scope + ":" + value));
+  const clientHash = Array.from(new Uint8Array(signature), b=>b.toString(16).padStart(2,"0")).join("");
   const now = new Date();
   const current = now.toISOString();
-  const resetBefore = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
-  // One atomic database upsert avoids per-process counters and most concurrency races.
-  const count = await DB.prepare(
+  const resetBefore = new Date(now.getTime() - windowHours*60*60*1000).toISOString();
+  const row = await DB.prepare(
     "INSERT INTO registration_rate_limits (client_hash,window_started,attempts) VALUES (?,?,1) " +
     "ON CONFLICT (client_hash) DO UPDATE SET " +
     "attempts=CASE WHEN registration_rate_limits.window_started < ? THEN 1 ELSE registration_rate_limits.attempts+1 END, " +
     "window_started=CASE WHEN registration_rate_limits.window_started < ? THEN excluded.window_started ELSE registration_rate_limits.window_started END " +
     "RETURNING attempts"
-  ).bind(hash, current, resetBefore, resetBefore).first() as {attempts:number}|null;
-  return Number(count?.attempts ?? 101) <= 100;
+  ).bind(clientHash,current,resetBefore,resetBefore).first() as {attempts:number}|null;
+  const attempts = Number(row?.attempts ?? maxAttempts+1);
+  return {allowed:attempts<=maxAttempts,attempts};
+}
+
+export async function checkRegistrationRate(request: Request) {
+  // Vercel provides and protects this forwarded header against IP spoofing.
+  if (process.env.VERCEL !== "1") return {allowed:true,ipAttempts:0};
+  const ip = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim();
+  if (!ip) return {allowed:false,ipAttempts:0}; // Fail closed if infrastructure loses the client IP.
+  const result = await rateLimit("client",ip,30,1);
+  return {allowed:result.allowed,ipAttempts:result.attempts};
+}
+
+export async function isPhoneRegistrationRateAllowed(phoneDigits: string) {
+  // Shared family phones remain possible, but repeated signups are capped.
+  return (await rateLimit("phone",phoneDigits,6,24)).allowed;
 }
 
 const maxRequestSize = 5 * 1024 * 1024 + 96 * 1024;

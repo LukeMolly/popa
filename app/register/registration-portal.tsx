@@ -116,6 +116,10 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
               <span className="secure"><ShieldCheck/> KYC protected</span>
             </div>
             <form onSubmit={submit}>
+              <div className="kyc-honeypot" aria-hidden="true">
+                <label htmlFor="companyWebsite">Company website</label>
+                <input id="companyWebsite" name="companyWebsite" tabIndex={-1} autoComplete="off" />
+              </div>
               <div className="form-grid">
                 <Field label="Full name"><Input name="fullName" required minLength={3} maxLength={160} placeholder="First name and surname" autoComplete="name"/></Field>
                 <Field label="Omang / Passport number"><Input name="idNumber" required minLength={5} maxLength={30} placeholder="Identity number"/></Field>

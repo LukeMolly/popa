@@ -1,7 +1,7 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../lib/platform";
 import { PAYMENT_METHOD_CODES, paymentMethodLabel } from "../../../lib/payment-methods";
 import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
-import { isRegistrationRateAllowed, readLimitedRegistrationForm } from "../../../lib/registration-security";
+import { checkRegistrationRate, isPhoneRegistrationRateAllowed, readLimitedRegistrationForm } from "../../../lib/registration-security";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +21,17 @@ export async function POST(request: Request) {
   if (!isTrustedWrite(request)) return writeDenied();
   let receiptUrl = "";
   try {
-    if (!(await isRegistrationRateAllowed(request))) {
+    const assessment = await checkRegistrationRate(request);
+    if (!assessment.allowed) {
       return Response.json({ error: "Too many registration attempts. Please try again later." }, {
         status: 429, headers: { "Retry-After": "3600", "Cache-Control": "no-store" },
       });
     }
     const form = await readLimitedRegistrationForm(request);
+    // An off-screen field traps basic automated form fillers without changing the visible UX.
+    if (String(form.get("companyWebsite") || "").trim()) {
+      return fail("Registration could not be submitted. Please retry.",400);
+    }
     const paymentMethod = String(form.get("paymentMethod") || "").trim().toLowerCase();
     const paymentMethodDetail = String(form.get("paymentMethodDetail") || "").trim().slice(0, 120);
     const reference = String(form.get("reference") || "").trim().slice(0, 100);
@@ -75,6 +80,19 @@ export async function POST(request: Request) {
     if (!["female", "male", "other"].includes(gender)) return fail("Choose a valid gender.");
     if (email.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Enter a valid email address.");
     if (!/^\+?[0-9\s-]+$/.test(phone) || phoneDigits.length < 7 || phoneDigits.length > 15) return fail("Enter a valid mobile number, including its country code.");
+    if (!(await isPhoneRegistrationRateAllowed(phoneDigits))) {
+      return Response.json({error:"Too many recent attempts using this mobile number. Please contact the membership administrator."},{
+        status:429,headers:{"Retry-After":"86400","Cache-Control":"no-store"}
+      });
+    }
+    const duplicatePhone = await DB.prepare(
+      "SELECT COUNT(*)::int AS count FROM members WHERE regexp_replace(phone,'[^0-9]','','g')=?"
+    ).bind(phoneDigits).first() as {count:number}|null;
+    const riskReasons:string[] = [];
+    if (Number(duplicatePhone?.count ?? 0)>0) riskReasons.push("Phone number shared with another registration");
+    if (assessment.ipAttempts>=10) riskReasons.push("Unusually rapid submissions from one network");
+    if (/^(?:test|testing|fake|dummy|asdf|qwerty)(?:\\s|$)/i.test(fullName)) riskReasons.push("Placeholder-style name");
+    const riskStatus=riskReasons.length?"flagged":"none";
 
     const parts = fullName.split(" ");
     const firstName = parts.shift() || fullName;
@@ -85,11 +103,11 @@ export async function POST(request: Request) {
     // KYC registration stays account-free and pending. Payments use the existing
     // admin-visible table. Pay-later members are not counted as submitted payments.
     const insertMember =
-      "INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender) " +
-      "VALUES (?,?,?,?,?,'pending','',?,?,?,?,?,?,?)";
+      "INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender,risk_status,risk_reasons) " +
+      "VALUES (?,?,?,?,?,'pending','',?,?,?,?,?,?,?,?,?)";
     const memberArgs = [
       membershipId, firstName, lastName, phone, email, token, now.toISOString(),
-      idNumber, dateOfBirth, placeOfBirth, membershipLocation, gender
+      idNumber, dateOfBirth, placeOfBirth, membershipLocation, gender, riskStatus, riskReasons.join("; ")
     ];
 
     if (paymentMethod) {

@@ -25,3 +25,6 @@
 .membership-admin-whatsapp{text-decoration:none;color:#07162f;cursor:pointer}
 .membership-admin-whatsapp:hover{text-decoration:none;background:#f5c51a}
 .membership-admin-whatsapp:focus-visible{outline:3px solid #0755d9;outline-offset:3px}
+
+/* Accessible to basic automated form filling, but not displayed or focusable to users. */
+.kyc-honeypot{position:absolute!important;left:-10000px!important;top:auto!important;width:1px!important;height:1px!important;overflow:hidden!important}
