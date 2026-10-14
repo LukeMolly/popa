@@ -60,7 +60,9 @@
 .portal-shell .registration-complete-id{display:grid;gap:6px;margin:22px 0 14px;padding:13px;border:1px solid #dde5f0;border-radius:11px;background:#f5f8fd}
 .portal-shell .registration-complete-id span{color:#60738c;font-size:.67rem;font-weight:900;letter-spacing:.12em}
 .portal-shell .registration-complete-id strong{color:#071a39;font-size:1.16rem;letter-spacing:.055em;overflow-wrap:anywhere}
-.portal-shell .registration-complete-payment{margin:0 auto 21px;max-width:365px;color:#546982;line-height:1.45;font-size:.83rem}
+.portal-shell .registration-complete-membership-status{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 21px;padding:10px 13px;border-radius:10px;background:#fff8e5;border:1px solid #f2d27c}
+.portal-shell .registration-complete-membership-status span{color:#71520d;font-size:.7rem;font-weight:900;letter-spacing:.07em}
+.portal-shell .registration-complete-membership-status strong{border-radius:99px;padding:5px 12px;background:#f6b519;color:#071a39;font-size:.8rem;font-weight:900}
 .portal-shell .registration-complete-contact{
  display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
  min-height:52px;padding:12px 16px;border-radius:10px;background:#f6b519;

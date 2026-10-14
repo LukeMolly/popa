@@ -90,13 +90,10 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
             <span>YOUR MEMBERSHIP ID</span>
             <strong>{result.membershipId}</strong>
           </div>
-          <p className="registration-complete-payment">
-            {result.proofUploaded
-              ? "Proof of payment attached. Verification is pending."
-              : paymentMethod
-                ? "Payment method recorded. Send your POP to the membership administrator."
-                : "Contact the membership administrator for payment assistance."}
-          </p>
+          <div className="registration-complete-membership-status" role="status">
+            <span>MEMBERSHIP STATUS</span>
+            <strong>Pending</strong>
+          </div>
           <a className="registration-complete-contact" href={whatsAppLink} target="_blank" rel="noopener noreferrer">
             <MessageCircle size={19} aria-hidden="true" />
             <span>Contact Membership Admin</span>
