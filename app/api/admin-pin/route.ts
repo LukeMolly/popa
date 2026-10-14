@@ -2,10 +2,12 @@ import { DB } from "../../../lib/platform";
 const env = { DB };
 import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, hashAdminPin, hashAdminSecret } from "../../admin-auth";
+import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
 export const dynamic="force-dynamic";
 const clean=(v:unknown,n=160)=>typeof v==="string"?v.trim().slice(0,n):"";
 const fail=(message:string,status=400)=>Response.json({error:message},{status});
 export async function POST(request:Request){
+ if (!isTrustedWrite(request)) return writeDenied();
  try{
   const data=await request.json() as Record<string,unknown>,email=clean(data.email).toLowerCase(),pin=clean(data.pin,6),now=new Date();
   if(!/^\S+@\S+\.\S+$/.test(email)||!/^\d{6}$/.test(pin))return fail("Enter your authorised email and six-digit PIN.");
@@ -14,7 +16,8 @@ export async function POST(request:Request){
   const admin=await env.DB.prepare("SELECT email,pin_salt AS pinSalt,pin_hash AS pinHash FROM admin_users WHERE email=? AND active=1").bind(email).first() as {email:string;pinSalt:string;pinHash:string}|null;
   const supplied=admin?await hashAdminPin(pin,admin.pinSalt):"";
   if(!admin||!admin.pinHash||supplied!==admin.pinHash){
-   const failed=(attempt?.failedCount||0)+1,lockedUntil=failed>=5?new Date(now.getTime()+15*60*1000).toISOString():"";
+   const previousLockExpired=!!attempt?.lockedUntil && attempt.lockedUntil<=now.toISOString();
+   const failed=(previousLockExpired?0:(attempt?.failedCount||0))+1,lockedUntil=failed>=5?new Date(now.getTime()+15*60*1000).toISOString():"";
    await env.DB.prepare("INSERT INTO admin_login_attempts (email,failed_count,locked_until,updated_at) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at").bind(email,failed,lockedUntil,now.toISOString()).run();
    return fail(failed>=5?"Too many incorrect attempts. Try again in 15 minutes.":"Email or PIN is incorrect.",401);
   }
@@ -24,7 +27,8 @@ export async function POST(request:Request){
   return Response.json({ok:true});
  }catch(error){console.error(error);return fail("PIN sign-in is temporarily unavailable.",500)}
 }
-export async function DELETE(){
+export async function DELETE(request:Request){
+ if (!isTrustedWrite(request)) return writeDenied();
  try{
   const jar=await cookies(),token=jar.get(ADMIN_SESSION_COOKIE)?.value;
   if(token)await env.DB.prepare("DELETE FROM admin_sessions WHERE token_hash=?").bind(await hashAdminSecret(token)).run();

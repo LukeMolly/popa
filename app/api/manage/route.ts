@@ -1,10 +1,12 @@
 import { DB } from "../../../lib/platform";
 const env = { DB };
 import { isClubAdmin } from "../../admin-auth";
+import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
 export const dynamic = "force-dynamic";
 const clean = (x:unknown,n=200) => typeof x==="string" ? x.trim().slice(0,n) : "";
 const fail = (message:string,status=400) => Response.json({error:message},{status});
 export async function POST(request:Request) {
+  if (!isTrustedWrite(request)) return writeDenied();
   if (!(await isClubAdmin(["executive","membership"]))) return fail("Membership administrator access required.",403);
   try {
     const data = await request.json() as Record<string,unknown>, db=env.DB, now=new Date().toISOString();
@@ -42,9 +44,16 @@ export async function POST(request:Request) {
       const codes=[...new Set(raw.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(Boolean))];
       if(!campaign||!codes.length) return fail("Enter a campaign and at least one code.");
       if(codes.length>500 || codes.some(s=>s.length>64||!/^[A-Z0-9_-]+$/.test(s))) return fail("Use up to 500 alphanumeric codes, with hyphens or underscores.");
-      const statements=codes.map(code=>db.prepare("INSERT OR IGNORE INTO promos (code,campaign,status,created_at) VALUES (?,?,'available',?)").bind(code,campaign,now));
-      const results=await db.batch(statements);
-      return Response.json({added:results.filter(x=>x.meta.changes).length,duplicates:results.filter(x=>!x.meta.changes).length});
+      // Insert the whole batch atomically with PostgreSQL conflict handling.
+      // Existing codes remain untouched, preserving their assignments.
+      const result=await db.prepare(
+        "INSERT INTO promos (code,campaign,status,created_at) " +
+        "SELECT submitted.code,?,'available',? " +
+        "FROM jsonb_array_elements_text(?::jsonb) AS submitted(code) " +
+        "WHERE TRUE ON CONFLICT (code) DO NOTHING RETURNING code"
+      ).bind(campaign,now,JSON.stringify(codes)).run();
+      const added=result.meta.changes;
+      return Response.json({added,duplicates:codes.length-added});
     }
     if(data.action==="assign") {
       const code=clean(data.code,64),memberId=clean(data.memberId,30);
@@ -52,12 +61,6 @@ export async function POST(request:Request) {
       if(!member) return fail("Select a valid member.");
       const result=await db.prepare("UPDATE promos SET member_id=?,status='assigned' WHERE code=? AND status='available'").bind(memberId,code).run();
       return result.meta.changes ? Response.json({ok:true}) : fail("Code already assigned or unavailable.",409);
-    }
-    if(data.action==="update") {
-      const title=clean(data.title,150),body=clean(data.body,3000);
-      if(!title||!body) return fail("Title and message are required.");
-      await db.prepare("INSERT INTO updates (title,body,created_at) VALUES (?,?,?)").bind(title,body,now).run();
-      return Response.json({ok:true});
     }
     return fail("Unknown action.");
   } catch(e) {console.error(e);return fail("Could not save. Please try again.",500)}

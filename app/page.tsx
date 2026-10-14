@@ -1,20 +1,32 @@
 import {ClubLogo} from "./components/club-logo";
-import { getChatGPTUser, chatGPTSignOutPath } from "./chatgpt-auth";
+import {getClubAdmin} from "./admin-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function PortalHome(){
- const user=await getChatGPTUser();
+ const admin = await getClubAdmin();
+ const firstName = admin?.name?.trim().split(/\s+/)[0] || "Administrator";
  return <main className="gateway-page">
-  <header className="gateway-header"><a href="/" className="gateway-brand"><ClubLogo/><span><strong>Township Rollers F.C.</strong><small>Unified Membership Platform</small></span></a>{user&&<a href={chatGPTSignOutPath("/")} className="gateway-signout">Sign out</a>}</header>
-  <section className="gateway-hero"><img src="/township-rollers-team.jpeg" alt="Township Rollers players in club colours"/><div className="gateway-overlay"/><div className="gateway-copy"><p>POPA POPA EA IPOPA</p><h1>One club.<br/>One membership platform.</h1><span>Register, manage your membership and stay connected.</span></div></section>
+  <header className="gateway-header"><a href="/" className="gateway-brand"><ClubLogo/><span><strong>Township Rollers F.C.</strong><small>KYC Onboarding</small></span></a></header>
+  <section className="gateway-hero"><img src="/township-rollers-team.jpeg" alt="Township Rollers players in club colours"/><div className="gateway-overlay"/><div className="gateway-copy"><p>POPA POPA EA IPOPA</p><h1>One club.<br/>One membership platform.</h1><span>Complete your KYC registration and connect with the club administration.</span></div></section>
   <section className="gateway-actions">
-   <div className="gateway-intro"><p className="eyebrow">JOIN THE POPA FAMILY</p>{user ? <><h2>Hi, {user.displayName.trim().split(" ")[0] || "Member"}</h2><p>Welcome to the Popa Popa ya Ipopa family.</p></> : <><h2>Welcome to POPA Membership</h2><p>Join the Township Rollers family by registering for your official membership. Already registered? Sign in to access your member portal.</p></>}</div>
+   {admin ? (
+    <div className="gateway-greeting">
+     <span className="gateway-greeting-mark"><ClubLogo className="gateway-greeting-crest"/></span>
+     <div className="gateway-greeting-copy">
+      <p className="gateway-greeting-label">POPA MEMBERSHIP</p>
+      <h2>Hi, <span>{firstName}</span><span aria-hidden="true" className="gateway-greeting-wave"> 👋</span></h2>
+      <p>Welcome back to POPA.</p>
+     </div>
+    </div>
+   ) : (
+    <div className="gateway-intro"><p className="eyebrow">JOIN THE POPA FAMILY</p><h2>Welcome to POPA Membership</h2><p>Join the Township Rollers family by submitting your KYC information. After registration, contact the membership administrator on WhatsApp.</p></div>
+   )}
    <div className="gateway-grid">
-    <article className="access-card member-access"><span className="access-number">01</span><h3>POPA Membership Registration</h3><p>Register for your POPA membership and complete your existing membership application process.</p><a href="/register">Register for POPA Membership <span>→</span></a><small>Already registered? <a href="/member-login">Member Login</a></small></article>
-    <article className="access-card admin-access"><span className="access-number">02</span><h3>Admin Login</h3><p>Review registrations and payments, activate memberships, manage cards, codes, fixtures and communications.</p><a href="/admin-login?return_to=/admin">Continue as administrator <span>→</span></a><small>Sign in with your authorised email and six-digit PIN.</small></article>
+    <article className="access-card member-access"><span className="access-number">01</span><h3>POPA KYC Registration</h3><p>Complete your registration details and send them to the membership office.</p><a href="/register">Start KYC Registration <span>→</span></a><small>2026–2027 season membership</small></article>
+    <article className="access-card admin-access"><span className="access-number">02</span><h3>Admin Login</h3><p>Review registrations, verify payments and manage club memberships.</p><a href="/admin-login?return_to=/admin">Continue as administrator <span>→</span></a><small>For authorised club officials.</small></article>
    </div>
   </section>
-  <footer className="gateway-footer"><span>Township Rollers F.C. Membership</span><a href="/club">View public club updates</a></footer>
+  <footer className="gateway-footer"><span>Township Rollers F.C. Membership</span></footer>
  </main>
 }

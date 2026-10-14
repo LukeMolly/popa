@@ -13,3 +13,36 @@
 @media(hover:hover){.access-card>a:hover{filter:brightness(.96);transform:translateY(-1px)}}
 @media(max-width:520px){.gateway-header{min-height:76px;height:auto;padding-block:12px;gap:12px}.gateway-brand{min-width:0}.gateway-brand>span:last-child{min-width:0}.gateway-brand strong{overflow-wrap:anywhere}.gateway-hero{height:clamp(310px,90vw,410px)}.gateway-copy{left:18px;right:18px;top:40px}.gateway-copy h1{font-size:clamp(2rem,9vw,2.7rem);overflow-wrap:break-word}.gateway-intro h2{font-size:clamp(24px,7vw,32px)}.access-card{min-height:0;padding:22px}.access-card h3{font-size:clamp(20px,6vw,26px);padding-right:28px}.gateway-footer a,.gateway-signout,.access-card>small a{display:inline-flex;align-items:center;min-height:44px}.access-card>a{min-height:52px}.gateway-actions{padding-bottom:calc(45px + env(safe-area-inset-bottom))}}
 @media(prefers-reduced-motion:reduce){.access-card>a{transition:none}}
+
+/* Branded administrator sign-off, matching the club's navy and gold identity. */
+.admin-signout-page{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(145deg,#071a36 0%,#123b7a 73%,#f6b519 73%)}
+.admin-signout-card{width:min(100%,480px);padding:36px 30px;text-align:center;background:#fff;border-radius:20px;border-top:6px solid #f6b519;box-shadow:0 25px 75px #06142c66}
+.admin-signout-card>.site-logo,.admin-signout-card>.mini-crest{margin:0 auto 14px;width:64px;height:64px;object-fit:contain}
+.admin-signout-card>.eyebrow{color:#123b7a;font-weight:900;letter-spacing:.16em;font-size:.73rem;margin:0}
+.admin-signout-card h1{color:#071a39;font-size:clamp(1.65rem,5vw,2rem);margin:12px 0}
+.admin-signout-card p:not(.eyebrow){color:#56677e;line-height:1.65}
+.admin-signout-symbol{width:56px;height:56px;display:grid;place-items:center;margin:22px auto 8px;border-radius:50%;font-size:32px;font-weight:900;background:#edf2f8;color:#123b7a}
+.admin-signout-symbol.completed{background:#e6f4ec;color:#167348}
+.admin-signout-symbol.failed{background:#fff0ef;color:#af3d3d}
+.admin-signout-home{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;margin-top:28px;padding:13px 20px;border:0;border-radius:10px;background:#f6b519;color:#071a39;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}
+.admin-signout-home:hover{background:#ffd25a}
+.admin-signout-home:focus-visible{outline:3px solid #123b7a;outline-offset:3px}
+.admin-signout-progress{display:block;color:#738398;font-size:.88rem;margin:20px auto}
+.admin-signout-footer{border-top:1px solid #e4eaf3;color:#718197;font-size:.76rem;margin-top:32px;padding-top:18px;letter-spacing:.02em}
+@media(max-width:520px){.admin-signout-page{padding:16px}.admin-signout-card{padding:28px 20px}}
+
+/* Compact, authenticated greeting on the homepage. */
+.gateway-greeting{display:flex;align-items:center;gap:17px;max-width:620px;margin:0 0 25px;padding:20px 24px;border-left:4px solid #f6b519;border-radius:15px;background:linear-gradient(112deg,#071a39,#123b7a);box-shadow:0 10px 28px #102b5a22;color:#fff}
+.gateway-greeting-mark{display:grid;place-items:center;flex-shrink:0;width:56px;height:56px;border:1px solid #f6b51977;border-radius:50%;background:#f6b5191b;color:#f6b519;font-weight:900;font-size:18px;letter-spacing:-.04em}
+.gateway-greeting-copy{min-width:0}
+.gateway-greeting-label{margin:0 0 4px;color:#ffce4f;font-size:.7rem;font-weight:900;letter-spacing:.13em}
+.gateway-greeting-copy h2{margin:0;font-size:clamp(1.5rem,4vw,2rem);line-height:1.2;color:#fff;overflow-wrap:anywhere}
+.gateway-greeting-copy h2>span:first-child{color:#ffd45b}
+.gateway-greeting-copy>p:last-child{margin:5px 0 0;color:#e0e8f5;font-size:.9rem}
+.gateway-greeting-wave{font-size:.8em}
+@media(max-width:520px){.gateway-greeting{gap:13px;padding:18px 15px}.gateway-greeting-mark{width:45px;height:45px;font-size:15px}}
+
+/* Official Township Rollers crest inside the authenticated greeting. */
+.gateway-greeting-mark{overflow:hidden}
+.gateway-greeting-mark .gateway-greeting-crest{display:block;width:46px;height:46px;object-fit:contain}
+@media(max-width:520px){.gateway-greeting-mark .gateway-greeting-crest{width:37px;height:37px}}

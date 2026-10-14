@@ -1,44 +1,136 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../lib/platform";
-import { newPasswordRecord } from "../../../lib/member-auth";
 import { PAYMENT_METHOD_CODES, paymentMethodLabel } from "../../../lib/payment-methods";
-const env = { DB };
+import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
+import { isRegistrationRateAllowed, readLimitedRegistrationForm } from "../../../lib/registration-security";
 
 export const dynamic = "force-dynamic";
-const fields = ["fullName","idNumber","dateOfBirth","placeOfBirth","membershipLocation","gender","email","phone","password"];
-const fail = (error:string,status=400) => Response.json({error},{status});
 
-export async function POST(request:Request){
- try{
-  const form=await request.formData();
-  for(const key of fields) if(!String(form.get(key)||"").trim()) return fail(`Missing ${key}.`);
-  const paymentMethod=String(form.get("paymentMethod")||"").trim().toLowerCase();
-  const paymentMethodDetail=String(form.get("paymentMethodDetail")||"").trim().slice(0,120);
-  if(!PAYMENT_METHOD_CODES.includes(paymentMethod as (typeof PAYMENT_METHOD_CODES)[number])) return fail("Choose FNB, Stanbic Bank or another payment method.");
-  if(paymentMethod==="other"&&!paymentMethodDetail) return fail("Describe the other payment method.");
-  const popSubmission=String(form.get("popSubmission")||"internal").trim().toLowerCase();
-  if(!["internal","whatsapp"].includes(popSubmission)) return fail("Choose internal portal upload or WhatsApp for POP submission.");
-  const proof=form.get("proof");
-  const hasProof=proof instanceof File&&proof.size>0;
-  if(popSubmission==="internal"&&!hasProof) return fail("Please upload proof of payment.");
-  if(hasProof&&proof.size>5*1024*1024) return fail("Proof of payment must be 5 MB or smaller.");
-  if(hasProof&&!["application/pdf","image/jpeg","image/png"].includes(proof.type)) return fail("Upload a PDF, JPG or PNG file.");
-  const fullName=String(form.get("fullName")).trim().replace(/\s+/g," ");
-  const password=String(form.get("password"));
-  if(!/^[A-Za-z0-9]{4}$/.test(password)) return fail("Use exactly 4 letters and/or digits for the PIN.");
-  if(password!==String(form.get("confirmPassword")||"")) return fail("Passwords do not match.");
-  const passwordRecord=await newPasswordRecord(password);
-  const parts=fullName.split(" "),firstName=parts.shift()||fullName,lastName=parts.join(" ")||"—";
-  const id="TRFC-"+crypto.randomUUID().slice(0,8).toUpperCase(),token=crypto.randomUUID(),now=new Date(),expiresAt="2027-07-31";
-  let receiptUrl="";
-  if(hasProof){const receiptKey=`payment-proofs/${id}/${proof.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;receiptUrl=await uploadReceipt(receiptKey,await proof.arrayBuffer(),proof.type);}
-  try { await env.DB.batch([
-   env.DB.prepare("INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender,password_salt,password_hash) VALUES (?,?,?,?,?,'pending',?,?,?,?,?,?,?,?,?,?)").bind(id,firstName,lastName,String(form.get("phone")).trim(),String(form.get("email")).trim().toLowerCase(),expiresAt,token,now.toISOString(),String(form.get("idNumber")).trim(),String(form.get("dateOfBirth")),String(form.get("placeOfBirth")).trim(),String(form.get("membershipLocation")),String(form.get("gender")),passwordRecord.salt,passwordRecord.hash),
-   env.DB.prepare("INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at) VALUES (?,?,200,?,?,?,'','submitted',?,?,'')").bind(crypto.randomUUID(),id,receiptUrl,hasProof?proof.name:"",hasProof?proof.type:"",`Payment method: ${paymentMethodLabel(paymentMethod,paymentMethodDetail)}; POP: ${popSubmission}`,now.toISOString())
-  ]); } catch(error) { if(receiptUrl) await deleteReceipt(receiptUrl); throw error; }
-  return Response.json({membershipId:id,expiresAt:new Date(expiresAt+"T23:59:59Z").toISOString()});
- }catch(error){
-  console.error("Public registration failed",error);
-  const message=error instanceof Error&&error.message.includes("UNIQUE")?"This identity number is already registered.":"Registration could not be saved. Please try again.";
-  return fail(message,error instanceof Error&&error.message.includes("UNIQUE")?409:500);
- }
+const requiredFields = ["fullName", "idNumber", "dateOfBirth", "placeOfBirth", "membershipLocation", "gender", "email", "phone"];
+const fail = (error: string, status = 400) => Response.json({ error }, { status });
+const maxProofSize = 5 * 1024 * 1024;
+const proofTypes = ["application/pdf", "image/jpeg", "image/png"];
+
+function validProofSignature(bytes: Uint8Array, type: string) {
+  if (type === "application/pdf") return bytes.length >= 5 && [37, 80, 68, 70, 45].every((byte, index) => bytes[index] === byte);
+  if (type === "image/jpeg") return bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+  if (type === "image/png") return bytes.length >= 8 && [137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte);
+  return false;
+}
+
+export async function POST(request: Request) {
+  if (!isTrustedWrite(request)) return writeDenied();
+  let receiptUrl = "";
+  try {
+    if (!(await isRegistrationRateAllowed(request))) {
+      return Response.json({ error: "Too many registration attempts. Please try again later." }, {
+        status: 429, headers: { "Retry-After": "3600", "Cache-Control": "no-store" },
+      });
+    }
+    const form = await readLimitedRegistrationForm(request);
+    const paymentMethod = String(form.get("paymentMethod") || "").trim().toLowerCase();
+    const paymentMethodDetail = String(form.get("paymentMethodDetail") || "").trim().slice(0, 120);
+    const reference = String(form.get("reference") || "").trim().slice(0, 100);
+    if (paymentMethod && !PAYMENT_METHOD_CODES.includes(paymentMethod as (typeof PAYMENT_METHOD_CODES)[number])) {
+      return fail("Select a valid banking or payment method.");
+    }
+    if (paymentMethod === "other" && !paymentMethodDetail) {
+      return fail("Specify the other payment method.");
+    }
+    const proof = form.get("proof");
+    const hasProof = proof instanceof File && proof.size > 0;
+    if (hasProof && !paymentMethod) return fail("Choose the bank or payment method used for the attached POP.");
+    if (hasProof && (proof.size > maxProofSize || !proofTypes.includes(proof.type))) {
+      return fail("POP attachment must be a PDF, JPG or PNG file of 5 MB or less.");
+    }
+    let proofBuffer: ArrayBuffer | undefined;
+    if (hasProof) {
+      proofBuffer = await proof.arrayBuffer();
+      if (!validProofSignature(new Uint8Array(proofBuffer), proof.type)) {
+        return fail("The POP attachment is not a valid PDF, JPG or PNG file.");
+      }
+    }
+    for (const key of requiredFields) {
+      if (!String(form.get(key) || "").trim()) return fail("Missing " + key + ".");
+    }
+
+    const fullName = String(form.get("fullName")).trim().replace(/\s+/g, " ");
+    const idNumber = String(form.get("idNumber")).trim().toUpperCase();
+    const dateOfBirth = String(form.get("dateOfBirth")).trim();
+    const placeOfBirth = String(form.get("placeOfBirth")).trim().replace(/\s+/g, " ");
+    const membershipLocation = String(form.get("membershipLocation")).trim();
+    const gender = String(form.get("gender")).trim().toLowerCase();
+    const email = String(form.get("email")).trim().toLowerCase();
+    const phone = String(form.get("phone")).trim().replace(/\s+/g, " ");
+    const phoneDigits = phone.replace(/\D/g, "");
+
+    if (fullName.length < 3 || fullName.length > 160 || !fullName.includes(" ")) return fail("Enter your first name and surname.");
+    if (!/^[A-Za-z0-9][A-Za-z0-9/-]{4,29}$/.test(idNumber)) return fail("Enter a valid Omang or passport number.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return fail("Choose a valid date of birth.");
+    const birthDate = new Date(dateOfBirth + "T00:00:00Z");
+    const now = new Date();
+    if (Number.isNaN(birthDate.getTime()) || birthDate.toISOString().slice(0, 10) !== dateOfBirth ||
+        birthDate > now || birthDate.getUTCFullYear() < now.getUTCFullYear() - 120) return fail("Enter a valid date of birth.");
+    if (placeOfBirth.length < 2 || placeOfBirth.length > 120) return fail("Enter a valid place of birth.");
+    if (membershipLocation.length < 2 || membershipLocation.length > 100) return fail("Enter a valid membership location.");
+    if (!["female", "male", "other"].includes(gender)) return fail("Choose a valid gender.");
+    if (email.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Enter a valid email address.");
+    if (!/^\+?[0-9\s-]+$/.test(phone) || phoneDigits.length < 7 || phoneDigits.length > 15) return fail("Enter a valid mobile number, including its country code.");
+
+    const parts = fullName.split(" ");
+    const firstName = parts.shift() || fullName;
+    const lastName = parts.join(" ");
+    const membershipId = "TRFC-" + crypto.randomUUID().slice(0, 8).toUpperCase();
+    const token = crypto.randomUUID();
+
+    // KYC registration stays account-free and pending. Payments use the existing
+    // admin-visible table. Pay-later members are not counted as submitted payments.
+    const insertMember =
+      "INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at,id_number,date_of_birth,place_of_birth,membership_location,gender) " +
+      "VALUES (?,?,?,?,?,'pending','',?,?,?,?,?,?,?)";
+    const memberArgs = [
+      membershipId, firstName, lastName, phone, email, token, now.toISOString(),
+      idNumber, dateOfBirth, placeOfBirth, membershipLocation, gender
+    ];
+
+    if (paymentMethod) {
+      let receiptName = "";
+      let receiptType = "";
+      if (hasProof && proofBuffer) {
+        const filename = proof.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 100) || "proof";
+        receiptName = proof.name.slice(0, 200);
+        receiptType = proof.type;
+        receiptUrl = await uploadReceipt("payment-proofs/kyc/" + membershipId + "/" + filename, proofBuffer, proof.type);
+      }
+      const note = "Payment method: " + paymentMethodLabel(paymentMethod, paymentMethodDetail) +
+        "; POP: " + (hasProof ? "attached during KYC onboarding" : "awaiting proof from member");
+      // One SQL statement guarantees the member and payment enter the admin tally together.
+      await DB.prepare(
+        "WITH member_insert AS (" + insertMember + " RETURNING id) " +
+        "INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at) " +
+        "SELECT ?,id,200,?,?,?,?,'submitted',?,?,' ' FROM member_insert"
+      ).bind(
+        ...memberArgs,
+        crypto.randomUUID(), receiptUrl, receiptName, receiptType, reference, note,
+        now.toISOString()
+      ).run();
+    } else {
+      await DB.prepare(insertMember).bind(...memberArgs).run();
+    }
+
+    return Response.json({ membershipId, firstName, proofUploaded: hasProof }, { status: 201 });
+  } catch (error) {
+    // Always clear orphaned private uploads, regardless of the error type.
+    if (receiptUrl) {
+      try { await deleteReceipt(receiptUrl); }
+      catch (cleanupError) { console.error("Could not clean up unattached POP", cleanupError); }
+    }
+    if (error instanceof RangeError) return fail("POP attachment and registration must be within the 5 MB upload limit.", 413);
+    if (error instanceof TypeError && !receiptUrl) return fail("Invalid registration form data.");
+    console.error("KYC onboarding registration failed", error);
+    const message = String(error).toLowerCase();
+    if (message.includes("23505") || message.includes("duplicate key") || message.includes("unique constraint")) {
+      return fail("This email address or Omang/passport number is already registered. Please contact the membership admin on WhatsApp.", 409);
+    }
+    return fail("Registration could not be saved. Please try again.", 500);
+  }
 }

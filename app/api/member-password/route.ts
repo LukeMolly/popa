@@ -1,17 +1,4 @@
-import { DB } from "../../../lib/platform";
-import { getMemberSession, newPasswordRecord } from "../../../lib/member-auth";
-
-const fail=(error:string,status=400)=>Response.json({error},{status});
-
-export async function POST(request:Request){
-  const member=await getMemberSession();
-  if(!member)return fail("Sign in before changing your password.",401);
-  const body=await request.json().catch(()=>null) as {password?:string;confirmPassword?:string}|null;
-  const password=String(body?.password||"");
-  if(!/^[A-Za-z0-9]{4}$/.test(password))return fail("Use exactly 4 letters and/or digits for your PIN.");
-  if(password!==String(body?.confirmPassword||""))return fail("Passwords do not match.");
-  if(password.toLowerCase()==="password")return fail("Choose a private password instead of the temporary password.");
-  const record=await newPasswordRecord(password);
-  await DB.prepare("UPDATE members SET password_salt=?,password_hash=?,password_must_change=FALSE WHERE id=?").bind(record.salt,record.hash,member.id).run();
-  return Response.json({ok:true});
+// Member accounts have been retired; only administrator login remains active.
+export async function POST() {
+  return Response.json({ error: "Member PIN management is no longer available. Please contact the membership admin." }, { status: 410 });
 }

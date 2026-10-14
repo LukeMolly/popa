@@ -8,13 +8,11 @@ type Member={id:string;firstName:string;lastName:string;phone:string;email:strin
 type Payment={id:string;amount:number;reference:string;status:string;note:string;createdAt:string}|null;
 type Fixture={id:string;opponent:string;kickoff:string;venue:string;homeAway:string;competition:string;rollersScore?:number;opponentScore?:number};
 type Standing={team:string;played:number;won:number;drawn:number;lost:number;goalDifference:number;points:number};
-type Update={id:number;title:string;body:string;createdAt:string};
 type Promo={code:string;campaign:string;status:string;createdAt:string};
 type DirectNotification={id:number;title:string;body:string;reply:string;repliedAt:string;createdAt:string};
 const when=(date:string)=>new Date(date).toLocaleString("en-BW",{dateStyle:"medium",timeStyle:"short"});
 export default function MemberPortal({params}:{params:Promise<{token:string}>}){
- const [token,setToken]=useState(""),[member,setMember]=useState<Member|null>(null),[payment,setPayment]=useState<Payment>(null),[club,setClub]=useState<{fixtures:Fixture[];results:Fixture[];standings:Standing[];updates:Update[]}>({fixtures:[],results:[],standings:[],updates:[]}),[directNotifications,setDirectNotifications]=useState<DirectNotification[]>([]),[promos,setPromos]=useState<Promo[]>([]),[qr,setQr]=useState(""),[error,setError]=useState(""),[success,setSuccess]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[tab,setTab]=useState<"home"|"updates">("home"),[unread,setUnread]=useState(0),[liveNotice,setLiveNotice]=useState("");
- const latestUpdateId=useRef(0);
+ const [token,setToken]=useState(""),[member,setMember]=useState<Member|null>(null),[payment,setPayment]=useState<Payment>(null),[directNotifications,setDirectNotifications]=useState<DirectNotification[]>([]),[promos,setPromos]=useState<Promo[]>([]),[qr,setQr]=useState(""),[error,setError]=useState(""),[success,setSuccess]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[tab,setTab]=useState<"home"|"updates">("home"),[unread,setUnread]=useState(0),[liveNotice,setLiveNotice]=useState("");
  const latestDirectId=useRef(0);
  useEffect(()=>{params.then(({token})=>setToken(token))},[params]);
  useEffect(()=>{if(!token)return;Promise.all([fetch("/api/member/"+encodeURIComponent(token),{cache:"no-store"}),Promise.resolve(null)]).then(async([a,b])=>{const m=await a.json() as {error?:string;member:Member;payment:Payment;notifications:DirectNotification[];promos:Promo[]};if(!a.ok)throw Error(m.error||"Member not found");setMember(m.member);setPayment(m.payment);setDirectNotifications(m.notifications||[]);setPromos(m.promos||[]);latestDirectId.current=Math.max(0,...(m.notifications||[]).map(u=>u.id));QRCode.toDataURL(location.origin+"/verify/"+token,{width:320,margin:2,color:{dark:"#102b5a",light:"#ffffff"}}).then(setQr)}).catch(e=>setError(e.message)).finally(()=>setLoading(false))},[token]);

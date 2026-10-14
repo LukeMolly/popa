@@ -1,15 +1,12 @@
-import { DB } from "../../../lib/platform";
-const env = { DB };
-import { notFound, redirect } from "next/navigation";
-import { requireChatGPTUser } from "../../chatgpt-auth";
+import { redirect } from "next/navigation";
 import { isClubAdmin } from "../../admin-auth";
 import MemberPortal from "./member-portal-client";
 
-export const dynamic="force-dynamic";
-export default async function ProtectedMemberPage({params}:{params:Promise<{token:string}>}){
- const {token}=await params,user=await requireChatGPTUser(`/member/${token}`);
- const member=await env.DB.prepare("SELECT email FROM members WHERE token=?").bind(token).first() as {email:string}|null;
- if(!member) notFound();
- if(member.email.toLowerCase()!==user.email.toLowerCase()&&!(await isClubAdmin(["executive","membership"]))) redirect("/account");
- return <MemberPortal params={Promise.resolve({token})}/>;
+export const dynamic = "force-dynamic";
+
+// The member portal is no longer available to members. Preserve the existing
+// administrator's member-record preview while members use KYC onboarding only.
+export default async function ProtectedMemberPage({ params }: { params: Promise<{ token: string }> }) {
+  if (!(await isClubAdmin(["executive", "membership"]))) redirect("/register");
+  return <MemberPortal params={params}/>;
 }

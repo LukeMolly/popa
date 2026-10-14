@@ -1,16 +1,13 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../../lib/platform";
 const env = { DB };
-import { getChatGPTUser } from "../../../chatgpt-auth";
 import { isClubAdmin } from "../../../admin-auth";
+import { isTrustedWrite, writeDenied } from "../../../../lib/request-security";
 export const dynamic="force-dynamic";
 type Context={params:Promise<{token:string}>};
 async function authorisedMember(token:string){
- const user=await getChatGPTUser();
- if(!user)return null;
- const member=await env.DB.prepare("SELECT id,email FROM members WHERE token=?").bind(token).first() as {id:string;email:string}|null;
- if(!member)return null;
- if(member.email.toLowerCase()!==user.email.toLowerCase()&&!(await isClubAdmin(["executive","membership"])))return null;
- return member;
+ // Preserve administrator access to member records; block all member accounts.
+ if(!(await isClubAdmin(["executive","membership"])))return null;
+ return env.DB.prepare("SELECT id,email FROM members WHERE token=?").bind(token).first() as Promise<{id:string;email:string}|null>;
 }
 export async function GET(_request:Request,{params}:Context){
  try{
@@ -28,6 +25,7 @@ export async function GET(_request:Request,{params}:Context){
  }catch(e){console.error(e);return Response.json({error:"Membership unavailable."},{status:500})}
 }
 export async function POST(request:Request,{params}:Context){
+ if (!isTrustedWrite(request)) return writeDenied();
  try{
   const {token}=await params;
   const authorised=await authorisedMember(token);
