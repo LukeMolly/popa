@@ -28,9 +28,10 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   const latestBirthDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const selectedBank = PAYMENT_METHODS.find(method => method.code === paymentMethod);
   const whatsAppLink = "https://wa.me/" + adminWhatsApp + "?text=" + encodeURIComponent(
-    "Hello Township Rollers Membership Admin, my name is " + (result?.firstName ?? "") +
-    ". My Township Rollers F.C. membership registration was submitted successfully. Membership ID: " +
-    (result?.membershipId ?? "") + ". Please assist with my membership status or enquiry."
+    "Hi Admin\n\n" +
+    (result?.firstName ?? "") + " of " + (result?.membershipId ?? "") +
+    " has successfully registered and needs your verification.\n\n" +
+    "With regards,\n\nNew member"
   );
 
   function openDatePicker() {
