@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     const riskReasons:string[] = [];
     if (Number(duplicatePhone?.count ?? 0)>0) riskReasons.push("Phone number shared with another registration");
     if (assessment.ipAttempts>=10) riskReasons.push("Unusually rapid submissions from one network");
-    if (/^(?:test|testing|fake|dummy|asdf|qwerty)(?:\\s|$)/i.test(fullName)) riskReasons.push("Placeholder-style name");
+    if (/^(?:test|testing|fake|dummy|asdf|qwerty)(?:\s|$)/i.test(fullName)) riskReasons.push("Placeholder-style name");
     const riskStatus=riskReasons.length?"flagged":"none";
 
     const parts = fullName.split(" ");

@@ -33,8 +33,9 @@ export async function POST(request:Request) {
       const result=await db.prepare(
         "UPDATE members SET risk_status=?," +
         " risk_reasons=CASE WHEN ?='flagged' THEN ? WHEN ?='confirmed' THEN CASE WHEN risk_reasons='' THEN ? ELSE risk_reasons || '; Review: ' || ? END ELSE risk_reasons END," +
-        " risk_reviewed_at=?,risk_reviewed_by=? WHERE id=?"
-      ).bind(decision,decision,reason,decision,reason,reason,now,admin.email,memberId).run();
+        " risk_reviewed_at=?,risk_reviewed_by=?," +
+        " status=CASE WHEN ? IN ('flagged','confirmed') AND status='active' THEN 'suspended' ELSE status END WHERE id=?"
+      ).bind(decision,decision,reason,decision,reason,reason,now,admin.email,decision,memberId).run();
       return result.meta.changes ? Response.json({ok:true}) : fail("Member not found.",404);
     }
     if(data.action==="expiry") {

@@ -39,7 +39,7 @@ export async function POST(request:Request){
     "WITH eligible AS MATERIALIZED (" +
     " SELECT p.id,p.member_id FROM payments p " +
     " JOIN members m ON m.id=p.member_id " +
-    " WHERE p.id=? AND p.status='submitted' AND m.risk_status NOT IN ('flagged','confirmed') FOR UPDATE OF p,m" +
+    " WHERE p.id=? AND p.status='submitted' AND (? <> 'approved' OR m.risk_status NOT IN ('flagged','confirmed')) FOR UPDATE OF p,m" +
     "), payment_review AS (" +
     " UPDATE payments p SET status=?," +
     " note=CASE WHEN ?='' THEN p.note WHEN p.note='' THEN 'Review: ' || ? ELSE p.note || '; Review: ' || ? END," +
@@ -51,7 +51,7 @@ export async function POST(request:Request){
     " RETURNING m.id" +
     ") SELECT (SELECT COUNT(*) FROM payment_review)::int AS reviewed," +
     " (SELECT COUNT(*) FROM member_activation)::int AS activated"
-   ).bind(id,status,note,note,note,now,"2027-07-31",status).first() as {reviewed:number;activated:number}|null;
+   ).bind(id,status,status,note,note,note,now,"2027-07-31",status).first() as {reviewed:number;activated:number}|null;
    if(Number(reviewed?.reviewed)!==1 || (status==="approved" && Number(reviewed?.activated)!==1)){
     return error("Payment is no longer awaiting review, or member requires fraud review.",409);
    }
