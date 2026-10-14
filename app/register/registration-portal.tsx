@@ -18,6 +18,8 @@ function Field({ label, children, hint }: { label: string; children: React.React
 export default function RegistrationPortal({ accountEmail }: { accountEmail: string }) {
   const dobRef = useRef<HTMLInputElement>(null);
   const [gender, setGender] = useState("");
+  const [documentType, setDocumentType] = useState<"omang" | "passport">("omang");
+  const [localPhone, setLocalPhone] = useState("");
   const [proofName, setProofName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentMethodDetail, setPaymentMethodDetail] = useState("");
@@ -42,12 +44,18 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!gender) { setError("Please select your gender."); return; }
+    if (!/^[0-9]{8}$/.test(localPhone)) { setError("Enter exactly eight digits after +267."); return; }
+    if (documentType === "omang" && !/^[0-9]{9}$/.test(String(new FormData(e.currentTarget).get("idNumber") || "").trim())) {
+      setError("Omang must contain exactly nine digits."); return;
+    }
     if (paymentMethod === "other" && !paymentMethodDetail.trim()) { setError("Specify the other payment method."); return; }
     if (proofName && !paymentMethod) { setError("Choose the bank or payment method used for the attached POP."); return; }
     setBusy(true);
     setError("");
     const form = new FormData(e.currentTarget);
     form.set("gender", gender);
+    form.set("documentType", documentType);
+    form.set("phone", localPhone);
     form.set("paymentMethod", paymentMethod);
     form.set("paymentMethodDetail", paymentMethodDetail);
     try {
@@ -122,7 +130,17 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
               </div>
               <div className="form-grid">
                 <Field label="Full name"><Input name="fullName" required minLength={3} maxLength={160} placeholder="First name and surname" autoComplete="name"/></Field>
-                <Field label="Omang / Passport number"><Input name="idNumber" required minLength={5} maxLength={30} placeholder="Identity number"/></Field>
+                <Field label="Identification type">
+                  <select className="document-type-select" name="documentType" value={documentType} onChange={e=>setDocumentType(e.target.value as "omang" | "passport")}>
+                    <option value="omang">Botswana Omang</option>
+                    <option value="passport">Passport</option>
+                  </select>
+                </Field>
+                <Field label={documentType==="omang"?"Omang number":"Passport number"} hint={documentType==="omang"?"Enter all 9 digits as printed on your Omang.":undefined}>
+                  <Input key={documentType} name="idNumber" required minLength={documentType==="omang"?9:5} maxLength={documentType==="omang"?9:30}
+                    pattern={documentType==="omang"?"[0-9]{9}":undefined} inputMode={documentType==="omang"?"numeric":"text"}
+                    placeholder={documentType==="omang"?"9-digit Omang number":"Passport number"} />
+                </Field>
                 <Field label="Date of birth" hint="Select your date from the calendar">
                   <div className="date-picker-field">
                     <Input ref={dobRef} name="dateOfBirth" required type="date" min="1906-01-01" max={latestBirthDate} autoComplete="bday"/>
@@ -131,7 +149,18 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
                 </Field>
                 <Field label="Place of birth"><Input name="placeOfBirth" required minLength={2} maxLength={120} placeholder="Town or village" autoComplete="address-level2"/></Field>
                 <Field label="Email address"><Input name="email" required type="email" maxLength={160} defaultValue={accountEmail} placeholder="name@example.com"/></Field>
-                <Field label="Mobile number" hint="Include country code, e.g. +267 7X XXX XXX"><Input name="phone" required type="tel" maxLength={20} placeholder="+267 7X XXX XXX" autoComplete="tel"/></Field>
+                <Field label="Mobile number" hint="Botswana (+267) · enter exactly 8 digits">
+                  <div className="phone-prefix-field">
+                    <span className="phone-prefix" aria-label="Fixed Botswana country code">+267</span>
+                    <Input name="phone" required type="tel" inputMode="numeric" pattern="[0-9]{8}"
+                      minLength={8} maxLength={8} autoComplete="tel-national" placeholder="7XXXXXXX"
+                      aria-label="Eight-digit Botswana mobile number" value={localPhone}
+                      onChange={e=>{
+                        const digits=e.target.value.replace(/\D/g,"");
+                        setLocalPhone(digits.length===11&&digits.startsWith("267")?digits.slice(3):digits.slice(0,8));
+                      }}/>
+                  </div>
+                </Field>
                 <Field label="Membership location"><Input name="membershipLocation" required maxLength={100} placeholder="Enter your branch or town"/></Field>
                 <Field label="Gender">
                   <RadioGroup value={gender} onValueChange={setGender} className="gender-row" required>

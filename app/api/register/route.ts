@@ -60,16 +60,23 @@ export async function POST(request: Request) {
 
     const fullName = String(form.get("fullName")).trim().replace(/\s+/g, " ");
     const idNumber = String(form.get("idNumber")).trim().toUpperCase();
+    const requestedDocumentType = String(form.get("documentType") || "").trim().toLowerCase();
+    // Legacy clients can omit documentType; modern forms make the distinction explicit.
+    const documentType = requestedDocumentType || (/^[0-9]{9}$/.test(idNumber) ? "omang" : "passport");
     const dateOfBirth = String(form.get("dateOfBirth")).trim();
     const placeOfBirth = String(form.get("placeOfBirth")).trim().replace(/\s+/g, " ");
     const membershipLocation = String(form.get("membershipLocation")).trim();
     const gender = String(form.get("gender")).trim().toLowerCase();
     const email = String(form.get("email")).trim().toLowerCase();
-    const phone = String(form.get("phone")).trim().replace(/\s+/g, " ");
-    const phoneDigits = phone.replace(/\D/g, "");
+    // The form submits exactly eight national digits; +267 is supplied by the server.
+    const localPhone = String(form.get("phone") || "").trim();
+    const phone = "+267" + localPhone;
+    const phoneDigits = "267" + localPhone;
 
     if (fullName.length < 3 || fullName.length > 160 || !fullName.includes(" ")) return fail("Enter your first name and surname.");
-    if (!/^[A-Za-z0-9][A-Za-z0-9/-]{4,29}$/.test(idNumber)) return fail("Enter a valid Omang or passport number.");
+    if (!["omang", "passport"].includes(documentType)) return fail("Choose Omang or passport.");
+    if (documentType === "omang" && !/^[0-9]{9}$/.test(idNumber)) return fail("Omang must contain exactly nine digits.");
+    if (documentType === "passport" && !/^[A-Za-z0-9][A-Za-z0-9/-]{4,29}$/.test(idNumber)) return fail("Enter a valid passport number.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return fail("Choose a valid date of birth.");
     const birthDate = new Date(dateOfBirth + "T00:00:00Z");
     const now = new Date();
@@ -79,19 +86,25 @@ export async function POST(request: Request) {
     if (membershipLocation.length < 2 || membershipLocation.length > 100) return fail("Enter a valid membership location.");
     if (!["female", "male", "other"].includes(gender)) return fail("Choose a valid gender.");
     if (email.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Enter a valid email address.");
-    if (!/^\+?[0-9\s-]+$/.test(phone) || phoneDigits.length < 7 || phoneDigits.length > 15) return fail("Enter a valid mobile number, including its country code.");
+    if (!/^[0-9]{8}$/.test(localPhone)) return fail("Enter exactly eight digits for your Botswana mobile number.");
     if (!(await isPhoneRegistrationRateAllowed(phoneDigits))) {
       return Response.json({error:"Too many recent attempts using this mobile number. Please contact the membership administrator."},{
         status:429,headers:{"Retry-After":"86400","Cache-Control":"no-store"}
       });
     }
     const duplicatePhone = await DB.prepare(
-      "SELECT COUNT(*)::int AS count FROM members WHERE regexp_replace(phone,'[^0-9]','','g')=?"
-    ).bind(phoneDigits).first() as {count:number}|null;
+      "SELECT COUNT(*)::int AS count FROM members WHERE regexp_replace(phone,'[^0-9]','','g') IN (?,?)"
+    ).bind(localPhone,phoneDigits).first() as {count:number}|null;
     const riskReasons:string[] = [];
     if (Number(duplicatePhone?.count ?? 0)>0) riskReasons.push("Phone number shared with another registration");
     if (assessment.ipAttempts>=10) riskReasons.push("Unusually rapid submissions from one network");
     if (/^(?:test|testing|fake|dummy|asdf|qwerty)(?:\s|$)/i.test(fullName)) riskReasons.push("Placeholder-style name");
+    // Omang encodes sex in its fifth digit: 1 male, 2 female.
+    // Passport numbers are not assessed; 'other' is explicitly exempt.
+    if (documentType === "omang" && gender !== "other" &&
+        idNumber[4] !== (gender === "female" ? "2" : "1")) {
+      riskReasons.push("Omang fifth digit does not match the selected gender");
+    }
     const riskStatus=riskReasons.length?"flagged":"none";
 
     const parts = fullName.split(" ");

@@ -28,3 +28,12 @@
 
 /* Accessible to basic automated form filling, but not displayed or focusable to users. */
 .kyc-honeypot{position:absolute!important;left:-10000px!important;top:auto!important;width:1px!important;height:1px!important;overflow:hidden!important}
+
+/* Permanent +267 country-code holder and numeric national contact field. */
+@scope (.portal-shell){
+  .document-type-select{height:46px;width:100%;border:1px solid #cdd7e5;border-radius:10px;background:#fbfcff;color:#07162f;padding:0 12px}
+  .phone-prefix-field{display:flex;align-items:stretch;height:46px;border:1px solid #cdd7e5;border-radius:10px;background:#fbfcff;overflow:hidden}
+  .phone-prefix{display:flex;align-items:center;justify-content:center;min-width:72px;padding:0 12px;background:#e6eefc;border-right:1px solid #cdd7e5;color:#063781;font-weight:900;letter-spacing:.02em;user-select:none}
+  .phone-prefix-field input{border:0!important;border-radius:0!important;background:transparent!important;flex:1;min-width:0;height:44px;box-shadow:none!important;letter-spacing:.035em}
+  .phone-prefix-field:focus-within{outline:2px solid #1769e8;outline-offset:2px}
+}
