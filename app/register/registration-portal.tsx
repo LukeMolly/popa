@@ -69,7 +69,7 @@ const [identityKind, setIdentityKind] = useState<"omang" | "passport">("omang");
   return <main className="portal-shell">
     <header className="topbar">
       <a className="brand" href="/" aria-label="Township Rollers home">
-        <ClubLogo/><span><strong>Township Rollers</strong><small>Member Onboarding</small></span>
+        <ClubLogo/><span><strong>Township Rollers</strong><small>Membership Registration</small></span>
       </a>
       <a href="/">Home</a>
     </header>
@@ -110,7 +110,7 @@ const [identityKind, setIdentityKind] = useState<"omang" | "passport">("omang");
           <section className="panel form-panel">
             <div className="section-heading">
               <div>
-                <span className="eyebrow">MEMBER ONBOARDING</span>
+                <span className="eyebrow">MEMBERSHIP REGISTRATION</span>
                 <h2>Complete your membership registration</h2>
                 <p>Provide your details as shown on your identity document. You do not need to create an account or password.</p>
               </div>
@@ -219,7 +219,7 @@ const [identityKind, setIdentityKind] = useState<"omang" | "passport">("omang");
               </div>
               {error && <p className="error" role="alert">{error}</p>}
               <label className="consent">
-                <input required type="checkbox"/> I confirm that these details are accurate and consent to their use for membership onboarding and contact by the club administration.
+                <input required type="checkbox"/> I confirm that these details are accurate and consent to their use for membership registration and contact by the club administration.
               </label>
               <Button type="submit" size="lg" className="submit-button" disabled={busy}>
                 {busy ? "Submitting membership…" : "Submit membership registration"}<ChevronRight/>
