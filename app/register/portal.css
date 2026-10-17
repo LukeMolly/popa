@@ -25,3 +25,8 @@
 .membership-admin-whatsapp{text-decoration:none;color:#07162f;cursor:pointer}
 .membership-admin-whatsapp:hover{text-decoration:none;background:#f5c51a}
 .membership-admin-whatsapp:focus-visible{outline:3px solid #0755d9;outline-offset:3px}
+
+/* Soft transparent fade between the registration photo and the form area. */
+.hero::after{content:"";position:absolute;inset:auto 0 0;height:95px;pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.4) 68%,#fff)}
+.hero-copy{z-index:1}
+@media(max-width:520px){.hero::after{height:70px}}
