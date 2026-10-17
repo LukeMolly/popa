@@ -18,6 +18,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
 export default function RegistrationPortal({ accountEmail }: { accountEmail: string }) {
   const dobRef = useRef<HTMLInputElement>(null);
   const [gender, setGender] = useState("");
+const [identityKind, setIdentityKind] = useState<"omang" | "passport">("omang");
   const [proofName, setProofName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentMethodDetail, setPaymentMethodDetail] = useState("");
@@ -28,7 +29,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
   const selectedBank = PAYMENT_METHODS.find(method => method.code === paymentMethod);
   const whatsAppLink = "https://wa.me/" + adminWhatsApp + "?text=" + encodeURIComponent(
     "Hello Township Rollers Membership Admin, my name is " + (result?.firstName ?? "") +
-    ". My Township Rollers F.C. KYC registration was saved successfully. Membership ID: " +
+    ". My Township Rollers F.C. membership registration was saved successfully. Membership ID: " +
     (result?.membershipId ?? "") + ". Please assist with my membership status or enquiry."
   );
 
@@ -79,7 +80,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
           <CheckCircle2 size={56} color="#15803d" aria-hidden="true"/>
           <span className="eyebrow" style={{ display: "block", marginTop: 14 }}>REGISTRATION SUBMITTED</span>
           <h1>Hello {result.firstName},</h1>
-          <p>Your Township Rollers F.C. KYC information has been sent and saved successfully. The membership administration team will review your details.</p>
+          <p>Your Township Rollers F.C. membership information has been sent and saved successfully. The membership administration team will review your details.</p>
           <p><strong>Membership ID: {result.membershipId}</strong></p>
           {result.proofUploaded
             ? <p><CheckCircle2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }} aria-hidden="true"/>Your proof of payment has been attached and is awaiting admin review.</p>
@@ -102,7 +103,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
           <div className="hero-copy">
             <p>POPA POPA EA IPOPA</p>
             <h1>Your club.<br/>Your membership.</h1>
-            <span>Complete your KYC details to register with Township Rollers F.C.</span>
+            <span>Complete your membership details to register with Township Rollers F.C.</span>
           </div>
         </section>
         <div className="workspace content-grid">
@@ -110,15 +111,15 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
             <div className="section-heading">
               <div>
                 <span className="eyebrow">MEMBER ONBOARDING</span>
-                <h2>Complete your KYC registration</h2>
+                <h2>Complete your membership registration</h2>
                 <p>Provide your details as shown on your identity document. You do not need to create an account or password.</p>
               </div>
-              <span className="secure"><ShieldCheck/> KYC protected</span>
+              <span className="secure"><ShieldCheck/> membership protected</span>
             </div>
             <form onSubmit={submit}>
               <div className="form-grid">
                 <Field label="Full name"><Input name="fullName" required minLength={3} maxLength={160} placeholder="First name and surname" autoComplete="name"/></Field>
-                <Field label="Omang / Passport number"><Input name="idNumber" required minLength={5} maxLength={30} placeholder="Identity number"/></Field>
+                <div className="field"><span className="flex h-[20px] items-center gap-1.5">Identity: <span className="inline-flex items-center gap-1" role="group" aria-label="Identity document type">{(["omang","passport"] as const).map(kind=><button key={kind} type="button" aria-pressed={identityKind===kind} onClick={()=>setIdentityKind(kind)} className={`inline-flex h-[18px] items-center rounded border px-1.5 py-0 text-[11px] font-bold leading-none ${identityKind===kind?"border-blue-700 bg-blue-700 text-white":"border-input bg-background text-foreground"}`}>{kind==="omang"?"Omang":"Passport"}</button>)}</span></span><Input key={identityKind} name="idNumber" required minLength={identityKind==="omang"?9:5} maxLength={identityKind==="omang"?9:30} inputMode={identityKind==="omang"?"numeric":"text"} pattern={identityKind==="omang"?"[0-9]{9}":undefined} placeholder={identityKind==="omang"?"9-digit Omang number":"Passport number"} aria-label={identityKind==="omang"?"Omang number":"Passport number"}/></div>
                 <Field label="Date of birth" hint="Select your date from the calendar">
                   <div className="date-picker-field">
                     <Input ref={dobRef} name="dateOfBirth" required type="date" min="1906-01-01" max={latestBirthDate} autoComplete="bday"/>
@@ -221,7 +222,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
                 <input required type="checkbox"/> I confirm that these details are accurate and consent to their use for membership onboarding and contact by the club administration.
               </label>
               <Button type="submit" size="lg" className="submit-button" disabled={busy}>
-                {busy ? "Submitting KYC…" : "Submit KYC registration"}<ChevronRight/>
+                {busy ? "Submitting membership…" : "Submit membership registration"}<ChevronRight/>
               </Button>
             </form>
           </section>
@@ -229,7 +230,7 @@ export default function RegistrationPortal({ accountEmail }: { accountEmail: str
             <div className="dark-card">
               <span className="eyebrow gold">WHAT HAPPENS NEXT</span>
               {[
-                ["01", "Complete KYC and choose how to pay"],
+                ["01", "Complete membership and choose how to pay"],
                 ["02", "Optionally upload your POP"],
                 ["03", "Receive your ID and contact admin"]
               ].map(([number, title]) => <div className="step" key={number}><b>{number}</b><span>{title}</span></div>)}
