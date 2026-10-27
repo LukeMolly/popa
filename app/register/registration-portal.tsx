@@ -88,7 +88,7 @@ const [identityKind, setIdentityKind] = useState<"omang" | "passport">("omang");
           <div className="approved-status"><strong>MEMBERSHIP STATUS</strong><span>Pending</span></div>
           <a className="approved-contact" href={whatsAppLink} target="_blank" rel="noopener noreferrer"><MessageCircle size={24} aria-hidden="true"/>Contact Membership Admin <ChevronRight size={24} aria-hidden="true"/></a>
           <a className="approved-home" href="/">Return to homepage</a>
-          <div className="approved-welcome"><strong>Welcome to POPA, {result.firstName}.</strong><p>Your club. Your membership.</p></div>
+          <div className="approved-welcome"><strong>Welcome to Popa Popa ya Ipopa.</strong><p>Your club. Your membership.</p></div>
         </div>
         <p className="approved-season">Township Rollers F.C. · 2026–2027 season</p>
       </section>
