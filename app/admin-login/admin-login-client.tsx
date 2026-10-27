@@ -82,7 +82,7 @@ export default function AdminLoginClient({ returnTo, googleEmail }: { returnTo: 
     } finally { setBusy(false); }
   }
 
-  return <main className="admin-login-page">
+  return <main className={`admin-login-page admin-login-page--${mode}`}>
     <section className="admin-login-card">
       <ClubLogo/>
       <p className="eyebrow">TOWNSHIP ROLLERS FC</p>
@@ -97,15 +97,15 @@ export default function AdminLoginClient({ returnTo, googleEmail }: { returnTo: 
         <div style={{marginTop:18, borderTop:"1px solid #e1e6ef", paddingTop:16}}>
           {googleEmail
             ? <button type="button" className="primary" disabled={busy} onClick={() => void startGoogleMfa()}>Verify Google account ({googleEmail})</button>
-            : <button type="button" disabled={busy} onClick={() => void signIn("google", { redirectTo: "/admin-login" })}>Continue with Google</button>}
+            : <button type="button" className="auth-google-button" disabled={busy} onClick={() => void signIn("google", { redirectTo: "/admin-login" })}>Continue with Google</button>}
           <p style={{fontSize:13}}>Google sign-in also requires Google Authenticator before administrator access.</p>
         </div>
       </>}
       {mode === "enroll" && <>
         <p><strong>Secure your administrator account</strong></p>
         <p>Scan this QR code in Google Authenticator, or enter the setup key manually. Then enter the six-digit code to activate protection.</p>
-        {qr && <img src={qr} alt="QR code for registering Township Rollers FC in Google Authenticator" style={{display:"block",width:220,maxWidth:"100%",margin:"18px auto"}}/>}
-        <p style={{overflowWrap:"anywhere",fontSize:13}}>Manual setup key: <code>{secret}</code></p>
+        {qr && <img className="auth-qr" src={qr} alt="QR code for registering Township Rollers FC in Google Authenticator"/>}
+        <p className="auth-setup-key">Manual setup key: <code>{secret}</code></p>
         <form onSubmit={submitMfa}>
           <label>Google Authenticator code<input name="code" autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" minLength={6} maxLength={6} value={code} onChange={event => setCode(event.target.value)} required /></label>
           <button className="primary" disabled={busy}>{busy ? "Activating…" : "Activate authenticator"}</button>
@@ -120,10 +120,10 @@ export default function AdminLoginClient({ returnTo, googleEmail }: { returnTo: 
       </>}
       {mode === "recovery" && <>
         <p><strong>Save these one-time recovery codes.</strong> You will only see them once. Store them securely outside your phone.</p>
-        <div style={{background:"#f4f6fa",borderRadius:12,padding:16,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:9,margin:"16px 0"}}>
-          {recoveryCodes.map(item => <code key={item} style={{fontSize:13,wordBreak:"break-word"}}>{item}</code>)}
+        <div className="auth-recovery-grid">
+          {recoveryCodes.map(item => <code key={item}>{item}</code>)}
         </div>
-        <button type="button" onClick={() => void navigator.clipboard.writeText(recoveryCodes.join("\n"))}>Copy recovery codes</button>
+        <button type="button" className="auth-copy-button" onClick={() => void navigator.clipboard.writeText(recoveryCodes.join("\n"))}>Copy recovery codes</button>
         <button type="button" className="primary" onClick={() => window.location.assign(returnTo)}>I have saved my recovery codes</button>
       </>}
       {error && <p className="form-error" role="alert">{error}</p>}
