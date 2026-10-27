@@ -21,3 +21,11 @@ INSERT INTO club_settings (id,membership_validity_days,expiry_reminder_days,upda
 
 -- Per-client throttling of public KYC submissions. Stores hashes, not raw IP addresses.
 CREATE TABLE IF NOT EXISTS registration_rate_limits (client_hash TEXT PRIMARY KEY, window_started TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0);
+
+-- Security-only: mandatory administrator MFA and server-enforced idle expiry.
+ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS mfa_verified_at TEXT NOT NULL DEFAULT '';
+CREATE TABLE IF NOT EXISTS admin_mfa (email TEXT PRIMARY KEY, secret_ciphertext TEXT NOT NULL DEFAULT '', pending_ciphertext TEXT NOT NULL DEFAULT '', pending_expires_at TEXT NOT NULL DEFAULT '', last_used_step BIGINT NOT NULL DEFAULT -1, enabled_at TEXT NOT NULL DEFAULT '');
+CREATE TABLE IF NOT EXISTS admin_mfa_challenges (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires_at TEXT NOT NULL, failed_attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_admin_mfa_challenges_email ON admin_mfa_challenges(email);
+CREATE TABLE IF NOT EXISTS admin_mfa_recovery (email TEXT NOT NULL, code_hash TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(email,code_hash));
+CREATE TABLE IF NOT EXISTS member_identity_flags (member_id TEXT PRIMARY KEY, flag_type TEXT NOT NULL, selected_gender TEXT NOT NULL, omang_gender TEXT NOT NULL, created_at TEXT NOT NULL, resolved_at TEXT NOT NULL DEFAULT '');
