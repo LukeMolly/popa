@@ -397,8 +397,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     font-size: 12px;
   }
   .portal-shell .hero {
-    min-height: 310px;
-    height: auto;
+    height: 330px;
   }
   .portal-shell .hero-copy {
     left: 16px;
