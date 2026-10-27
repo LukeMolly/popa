@@ -3,6 +3,7 @@ const env = { DB };
 import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, hashAdminPin, hashAdminSecret } from "../../admin-auth";
 import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
+import { issueMfaChallenge } from "../../../lib/admin-mfa";
 export const dynamic="force-dynamic";
 const clean=(v:unknown,n=160)=>typeof v==="string"?v.trim().slice(0,n):"";
 const fail=(message:string,status=400)=>Response.json({error:message},{status});
@@ -21,10 +22,10 @@ export async function POST(request:Request){
    await env.DB.prepare("INSERT INTO admin_login_attempts (email,failed_count,locked_until,updated_at) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET failed_count=excluded.failed_count,locked_until=excluded.locked_until,updated_at=excluded.updated_at").bind(email,failed,lockedUntil,now.toISOString()).run();
    return fail(failed>=5?"Too many incorrect attempts. Try again in 15 minutes.":"Email or PIN is incorrect.",401);
   }
-  const bytes=crypto.getRandomValues(new Uint8Array(32)),token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,""),tokenHash=await hashAdminSecret(token),expiresAt=new Date(now.getTime()+7*24*60*60*1000);
-  await env.DB.batch([env.DB.prepare("DELETE FROM admin_login_attempts WHERE email=?").bind(email),env.DB.prepare("DELETE FROM admin_sessions WHERE email=? OR expires_at<=?").bind(email,now.toISOString()),env.DB.prepare("INSERT INTO admin_sessions (token_hash,email,expires_at,created_at) VALUES (?,?,?,?)").bind(tokenHash,email,expiresAt.toISOString(),now.toISOString())]);
-  (await cookies()).set(ADMIN_SESSION_COOKIE,token,{httpOnly:true,secure:true,sameSite:"lax",path:"/",expires:expiresAt});
-  return Response.json({ok:true});
+  // PIN verification only starts a short-lived MFA challenge; it never grants admin access.
+  await env.DB.batch([env.DB.prepare("DELETE FROM admin_login_attempts WHERE email=?").bind(email),env.DB.prepare("DELETE FROM admin_sessions WHERE email=? OR expires_at<=?").bind(email,now.toISOString())]);
+  await issueMfaChallenge(email);
+  return Response.json({mfaRequired:true},{headers:{"Cache-Control":"no-store"}});
  }catch(error){console.error(error);return fail("PIN sign-in is temporarily unavailable.",500)}
 }
 export async function DELETE(request:Request){
