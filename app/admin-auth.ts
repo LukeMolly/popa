@@ -1,4 +1,3 @@
-import { auth } from "../auth";
 import { DB } from "../lib/platform";
 const env = { DB };
 import { cookies } from "next/headers";
@@ -16,20 +15,12 @@ export async function hashAdminPin(pin: string, salt: string) {
   return Array.from(new Uint8Array(bits), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 export async function getClubAdmin(): Promise<ClubAdmin | null> {
-  // No admin elevation from retired member sessions or an email-only owner bypass.
-  const googleSession = await auth();
-  const email = googleSession?.user?.email?.trim().toLowerCase();
-  if (email) {
-    try {
-      const row = await env.DB.prepare("SELECT email,name,role FROM admin_users WHERE email=? AND active=1").bind(email).first() as ClubAdmin | null;
-      if (row && ["executive", "membership", "operations", "coach"].includes(row.role)) return row;
-    } catch (error) { console.error("Administrator lookup failed", error); }
-  }
+  // Google OAuth alone cannot elevate administrators; MFA-backed PIN/OAuth sessions only.
   try {
     const token = (await cookies()).get(ADMIN_SESSION_COOKIE)?.value;
     if (!token) return null;
     const tokenHash = await hashAdminSecret(token);
-    const row = await env.DB.prepare("SELECT a.email,a.name,a.role FROM admin_sessions s JOIN admin_users a ON a.email=s.email WHERE s.token_hash=? AND s.expires_at>? AND a.active=1").bind(tokenHash,new Date().toISOString()).first() as ClubAdmin | null;
+    const row = await env.DB.prepare("SELECT a.email,a.name,a.role FROM admin_sessions s JOIN admin_users a ON a.email=s.email WHERE s.token_hash=? AND s.expires_at>? AND s.mfa_verified_at<>'' AND a.active=1").bind(tokenHash,new Date().toISOString()).first() as ClubAdmin | null;
     if (!row || !["executive", "membership", "operations", "coach"].includes(row.role)) return null;
     return row;
   } catch (error) {
