@@ -25,3 +25,28 @@
 .membership-admin-whatsapp{text-decoration:none;color:#07162f;cursor:pointer}
 .membership-admin-whatsapp:hover{text-decoration:none;background:#f5c51a}
 .membership-admin-whatsapp:focus-visible{outline:3px solid #0755d9;outline-offset:3px}
+
+
+/* Approved POPA registration confirmation signature (2026–2027). */
+.approved-confirmation{min-height:calc(100vh - 76px);padding:38px 18px 20px;background:linear-gradient(145deg,#071a36 0%,#123b7a 76%,#f6b519 76%);text-align:center}
+.approved-confirmation-card{max-width:620px;margin:0 auto;background:#fff;border-radius:25px;border-top:9px solid #f6b519;padding:48px 34px 34px;box-shadow:0 24px 65px #071a3650;color:#071a39}
+.approved-confirmation-card .site-logo,.approved-confirmation-card .mini-crest,.approved-confirmation-card img{display:block;width:92px;height:92px;object-fit:contain;margin:0 auto 20px}
+.approved-club-name{font-size:17px;font-weight:900;letter-spacing:.17em;color:#173d71;margin:10px 0}
+.approved-club-motto{font-size:14px;font-weight:900;letter-spacing:.16em;color:#9d812c;margin:0 0 30px}
+.approved-check{width:70px;height:70px;display:grid;place-items:center;margin:0 auto 24px;background:#e8f5ee;border-radius:50%;color:#19774c}
+.approved-received{color:#19774c;font-weight:900;letter-spacing:.13em;font-size:15px}
+.approved-confirmation-card h1{font-size:clamp(29px,6vw,43px);letter-spacing:-.035em;color:#071a39;margin:18px 0}
+.approved-description{color:#697788;font-size:clamp(17px,3.7vw,21px);line-height:1.6;margin:0 auto 34px;max-width:490px}
+.approved-id{display:grid;gap:12px;background:#f3f6fa;border:1px solid #e0e6ed;border-radius:17px;padding:24px 12px;margin-bottom:20px}
+.approved-id span{color:#687b91;font-size:14px;font-weight:900;letter-spacing:.12em}
+.approved-id strong{font-size:clamp(23px,5vw,30px);letter-spacing:.035em;overflow-wrap:anywhere}
+.approved-status{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff8e5;border:1px solid #eadca5;border-radius:17px;padding:17px 20px;text-align:left;margin-bottom:28px}
+.approved-status strong{font-size:15px;color:#7b6322;letter-spacing:.03em}
+.approved-status span{background:#f6b519;border-radius:40px;padding:11px 20px;font-weight:900;color:#071a39}
+.approved-contact{display:flex;align-items:center;justify-content:center;gap:12px;padding:20px 14px;background:#ffd45b;border-radius:15px;color:#071a39;font-weight:900;text-decoration:none;font-size:clamp(15px,3.8vw,20px)}
+.approved-contact svg:last-child{margin-left:auto}
+.approved-home{display:inline-block;margin:30px auto 35px;color:#204b7b;text-decoration:underline;font-weight:800}
+.approved-welcome{border-top:1px solid #e6e8ec;padding-top:26px;color:#204b7b;font-size:20px}
+.approved-welcome p{font-size:17px;color:#8b95a2;margin:10px 0 0}
+.approved-season{color:#e5eaf1;margin:24px auto 0}
+@media(max-width:520px){.approved-confirmation{padding:20px 14px}.approved-confirmation-card{padding:35px 20px 28px}.approved-status{padding:14px 12px}.approved-status strong{font-size:13px}.approved-status span{padding:10px 14px}}
