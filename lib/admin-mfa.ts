@@ -114,6 +114,11 @@ export function newRecoveryCodes() {
 export async function recoveryHash(email: string, code: string) {
   return hashAdminSecret("trfc-recovery-v1:" + email.toLowerCase() + ":" + code.replace(/[\s-]/g, "").toUpperCase());
 }
+export async function isMfaLocked(email: string) {
+  const attempt = await DB.prepare("SELECT locked_until AS lockedUntil FROM admin_mfa_attempts WHERE email=?")
+    .bind(email.toLowerCase()).first() as { lockedUntil: string } | null;
+  return !!attempt?.lockedUntil && attempt.lockedUntil > new Date().toISOString();
+}
 export async function issueMfaChallenge(email: string) {
   const now = new Date(), expiry = new Date(now.getTime() + CHALLENGE_MS);
   const token = randomToken(), tokenHash = await hashAdminSecret(token), lower = email.toLowerCase();
@@ -129,15 +134,28 @@ export async function readMfaChallenge() {
   if (!token) return null;
   const row = await DB.prepare("SELECT email,failed_attempts AS failedAttempts FROM admin_mfa_challenges WHERE token_hash=? AND expires_at>? AND failed_attempts<5")
     .bind(await hashAdminSecret(token), new Date().toISOString()).first() as { email: string; failedAttempts: number } | null;
-  if (!row) return null;
+  if (!row || await isMfaLocked(row.email)) return null;
   const admin = await DB.prepare("SELECT email FROM admin_users WHERE email=? AND active=1").bind(row.email).first();
   return admin ? row : null;
 }
 export async function recordMfaFailure() {
   const token = (await cookies()).get(MFA_CHALLENGE_COOKIE)?.value;
   if (!token) return;
-  await DB.prepare("UPDATE admin_mfa_challenges SET failed_attempts=failed_attempts+1 WHERE token_hash=?")
-    .bind(await hashAdminSecret(token)).run();
+  const hash = await hashAdminSecret(token);
+  const challenge = await DB.prepare("UPDATE admin_mfa_challenges SET failed_attempts=failed_attempts+1 WHERE token_hash=? RETURNING email")
+    .bind(hash).first() as { email: string } | null;
+  if (!challenge) return;
+  // Account-level limit prevents bypassing per-challenge limits by repeatedly
+  // entering a valid PIN or restarting a Google OAuth challenge.
+  const now = new Date(), cutoff = new Date(now.getTime() - 15 * 60 * 1000);
+  const lockUntil = new Date(now.getTime() + 15 * 60 * 1000);
+  await DB.prepare(
+    "INSERT INTO admin_mfa_attempts (email,failed_count,locked_until,updated_at) VALUES (?,1,'',?) " +
+    "ON CONFLICT (email) DO UPDATE SET " +
+    "failed_count=CASE WHEN admin_mfa_attempts.updated_at<? THEN 1 ELSE admin_mfa_attempts.failed_count+1 END," +
+    "locked_until=CASE WHEN admin_mfa_attempts.updated_at<? THEN '' WHEN admin_mfa_attempts.failed_count+1>=5 THEN ? ELSE '' END," +
+    "updated_at=excluded.updated_at"
+  ).bind(challenge.email, now.toISOString(), cutoff.toISOString(), cutoff.toISOString(), lockUntil.toISOString()).run();
 }
 export async function completeMfaSignIn(email: string) {
   const token = (await cookies()).get(MFA_CHALLENGE_COOKIE)?.value;
@@ -153,4 +171,5 @@ export async function completeMfaSignIn(email: string) {
   const jar = await cookies();
   jar.set(ADMIN_SESSION_COOKIE, sessionToken, { httpOnly: true, secure: true, sameSite: "lax", path: "/", expires: expiresAt });
   jar.set(MFA_CHALLENGE_COOKIE, "", { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 });
+  await DB.prepare("DELETE FROM admin_mfa_attempts WHERE email=?").bind(email).run();
 }
