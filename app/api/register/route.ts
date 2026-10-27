@@ -55,6 +55,7 @@ export async function POST(request: Request) {
 
     const fullName = String(form.get("fullName")).trim().replace(/\s+/g, " ");
     const idNumber = String(form.get("idNumber")).trim().toUpperCase();
+    const identityKind = String(form.get("identityKind") || "").trim().toLowerCase();
     const dateOfBirth = String(form.get("dateOfBirth")).trim();
     const placeOfBirth = String(form.get("placeOfBirth")).trim().replace(/\s+/g, " ");
     const membershipLocation = String(form.get("membershipLocation")).trim();
@@ -115,6 +116,23 @@ export async function POST(request: Request) {
       ).run();
     } else {
       await DB.prepare(insertMember).bind(...memberArgs).run();
+    }
+
+    // Security-only audit: flag a claimed gender that conflicts with the fifth
+    // digit of an Omang. Never change the member's chosen gender or registration status.
+    const isOmang = identityKind === "omang" || (!identityKind && /^[0-9]{9}$/.test(idNumber));
+    if (isOmang && /^[0-9]{9}$/.test(idNumber) && gender !== "other") {
+      const digit = idNumber[4];
+      const expectedGender = digit === "1" ? "male" : digit === "2" ? "female" : "unrecognized";
+      if (expectedGender !== gender) {
+        try {
+          await DB.prepare("INSERT INTO member_identity_flags (member_id,flag_type,selected_gender,omang_gender,created_at) VALUES (?,?,?,?,?) ON CONFLICT (member_id) DO NOTHING")
+            .bind(membershipId, expectedGender === "unrecognized" ? "omang_digit_unrecognized" : "gender_mismatch", gender, expectedGender, now.toISOString()).run();
+        } catch (auditError) {
+          // Registration is already committed; do not force a duplicate on retry.
+          console.error("Could not record Omang gender verification flag", auditError);
+        }
+      }
     }
 
     return Response.json({ membershipId, firstName, proofUploaded: hasProof }, { status: 201 });
