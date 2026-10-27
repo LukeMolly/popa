@@ -29,3 +29,4 @@ CREATE TABLE IF NOT EXISTS admin_mfa_challenges (token_hash TEXT PRIMARY KEY, em
 CREATE INDEX IF NOT EXISTS idx_admin_mfa_challenges_email ON admin_mfa_challenges(email);
 CREATE TABLE IF NOT EXISTS admin_mfa_recovery (email TEXT NOT NULL, code_hash TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(email,code_hash));
 CREATE TABLE IF NOT EXISTS member_identity_flags (member_id TEXT PRIMARY KEY, flag_type TEXT NOT NULL, selected_gender TEXT NOT NULL, omang_gender TEXT NOT NULL, created_at TEXT NOT NULL, resolved_at TEXT NOT NULL DEFAULT '');
+CREATE TABLE IF NOT EXISTS admin_mfa_attempts (email TEXT PRIMARY KEY, failed_count INTEGER NOT NULL DEFAULT 0, locked_until TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL);
