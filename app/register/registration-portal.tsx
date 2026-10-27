@@ -75,25 +75,22 @@ const [identityKind, setIdentityKind] = useState<"omang" | "passport">("omang");
     </header>
 
     {result ? (
-      <section className="workspace" style={{ maxWidth: 760, margin: "36px auto 80px", padding: "0 18px" }} aria-live="polite">
-        <div className="panel status-panel" style={{ textAlign: "center", padding: "44px 28px" }}>
-          <CheckCircle2 size={56} color="#15803d" aria-hidden="true"/>
-          <span className="eyebrow" style={{ display: "block", marginTop: 14 }}>REGISTRATION SUBMITTED</span>
-          <h1>Hello {result.firstName},</h1>
-          <p>Your Township Rollers F.C. membership information has been sent and saved successfully. The membership administration team will review your details.</p>
-          <p><strong>Membership ID: {result.membershipId}</strong></p>
-          {result.proofUploaded
-            ? <p><CheckCircle2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }} aria-hidden="true"/>Your proof of payment has been attached and is awaiting admin review.</p>
-            : paymentMethod
-              ? <p>Your payment method has been recorded. Please send your POP to the membership administrator for verification.</p>
-              : <p>No payment was recorded. You may contact the administrator for payment guidance.</p>}
-          <p>For your membership status and all inquiries, contact the membership administrator on WhatsApp at <strong>{adminWhatsAppDisplay}</strong>. Please provide your membership ID when contacting the administrator.</p>
-          <a className="submit-button" href={whatsAppLink} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, textDecoration: "none", marginTop: 16, padding: "14px 22px" }}>
-            <MessageCircle size={20}/> Contact admin on WhatsApp
-          </a>
-          <p style={{ marginTop: 18 }}>No member account or login is required.</p>
-          <a href="/" style={{ display: "inline-block", marginTop: 8 }}>Return to home</a>
+      <section className="approved-confirmation" aria-live="polite">
+        <div className="approved-confirmation-card">
+          <ClubLogo/>
+          <p className="approved-club-name">TOWNSHIP ROLLERS F.C.</p>
+          <p className="approved-club-motto">POPA POPA EA IPOPA</p>
+          <div className="approved-check"><CheckCircle2 size={34} aria-hidden="true"/></div>
+          <p className="approved-received">REGISTRATION RECEIVED</p>
+          <h1>Thank you, {result.firstName}!</h1>
+          <p className="approved-description">Your membership registration has been received for review.</p>
+          <div className="approved-id"><span>YOUR MEMBERSHIP ID</span><strong>{result.membershipId}</strong></div>
+          <div className="approved-status"><strong>MEMBERSHIP STATUS</strong><span>Pending</span></div>
+          <a className="approved-contact" href={whatsAppLink} target="_blank" rel="noopener noreferrer"><MessageCircle size={24} aria-hidden="true"/>Contact Membership Admin <ChevronRight size={24} aria-hidden="true"/></a>
+          <a className="approved-home" href="/">Return to homepage</a>
+          <div className="approved-welcome"><strong>Welcome to POPA, {result.firstName}.</strong><p>Your club. Your membership.</p></div>
         </div>
+        <p className="approved-season">Township Rollers F.C. · 2026–2027 season</p>
       </section>
     ) : (
       <>
