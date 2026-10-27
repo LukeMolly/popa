@@ -49,6 +49,8 @@ const [identityKind, setIdentityKind] = useState<"omang" | "passport">("omang");
     setError("");
     const form = new FormData(e.currentTarget);
     form.set("gender", gender);
+    // Sent only for server-side Omang audit; no change to registration UI.
+    form.set("identityKind", identityKind);
     form.set("paymentMethod", paymentMethod);
     form.set("paymentMethodDetail", paymentMethodDetail);
     try {
