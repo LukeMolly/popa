@@ -54,6 +54,11 @@ export async function POST(request: Request) {
       const result = await env.DB.prepare("DELETE FROM admin_users WHERE email=?").bind(email).run();
       if (result.meta.changes) {
         await env.DB.prepare("DELETE FROM admin_sessions WHERE email=?").bind(email).run();
+        // Removing an administrator also revokes the enrolled authenticator and recovery credentials.
+        await env.DB.prepare("DELETE FROM admin_mfa_challenges WHERE email=?").bind(email).run();
+        await env.DB.prepare("DELETE FROM admin_mfa_recovery WHERE email=?").bind(email).run();
+        await env.DB.prepare("DELETE FROM admin_mfa_attempts WHERE email=?").bind(email).run();
+        await env.DB.prepare("DELETE FROM admin_mfa WHERE email=?").bind(email).run();
       }
       return result.meta.changes ? Response.json({ ok: true }) : fail("Administrator not found.", 404);
     }
