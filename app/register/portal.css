@@ -50,3 +50,29 @@
 .approved-welcome p{font-size:17px;color:#8b95a2;margin:10px 0 0}
 .approved-season{color:#e5eaf1;margin:24px auto 0}
 @media(max-width:520px){.approved-confirmation{padding:20px 14px}.approved-confirmation-card{padding:35px 20px 28px}.approved-status{padding:14px 12px}.approved-status strong{font-size:13px}.approved-status span{padding:10px 14px}}
+
+
+/* Mobile-friendly approved registration signature. */
+@media(max-width:600px){
+.approved-confirmation{min-height:100dvh;padding:14px 12px 24px;background:linear-gradient(145deg,#071a36 0%,#123b7a 80%,#f6b519 80%)}
+.approved-confirmation-card{width:100%;padding:26px 18px 26px;border-radius:22px;border-top-width:7px}
+.approved-confirmation-card .site-logo,.approved-confirmation-card .mini-crest,.approved-confirmation-card img{width:72px;height:72px;margin-bottom:14px}
+.approved-club-name{font-size:14px;letter-spacing:.11em}
+.approved-club-motto{font-size:12px;letter-spacing:.1em;margin-bottom:20px}
+.approved-check{width:58px;height:58px;margin-bottom:16px}
+.approved-received{font-size:13px;letter-spacing:.1em}
+.approved-confirmation-card h1{font-size:clamp(26px,7vw,34px);line-height:1.2;margin:14px 0}
+.approved-description{font-size:16px;line-height:1.5;margin-bottom:24px}
+.approved-id{padding:18px 10px;margin-bottom:14px;gap:8px}
+.approved-id span{font-size:12px}
+.approved-id strong{font-size:clamp(20px,6vw,26px)}
+.approved-status{margin-bottom:20px;gap:8px}
+.approved-status strong{font-size:12px}
+.approved-status span{font-size:14px;padding:9px 12px}
+.approved-contact{min-height:58px;padding:14px 12px;gap:9px;font-size:clamp(13px,4vw,17px)}
+.approved-contact svg{flex-shrink:0;width:21px;height:21px}
+.approved-home{margin:24px auto;font-size:15px}
+.approved-welcome{padding-top:22px;font-size:clamp(17px,5vw,21px);line-height:1.4}
+.approved-welcome p{font-size:15px}
+.approved-season{font-size:12px}
+}
