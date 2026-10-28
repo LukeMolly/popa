@@ -50,16 +50,20 @@ export async function downloadMembershipCard(member: DownloadCard, qr: string): 
   ctx.drawImage(code, qrX, qrY, qrSize, qrSize);
 
   const status = member.status.toUpperCase();
-  ctx.font = "bold 27px Arial, sans-serif";
-  const badgeWidth = Math.max(175, ctx.measureText(status).width + 62);
-  const badgeX = (WIDTH - badgeWidth) / 2;
-  const badgeY = 1095;
-  ctx.fillStyle = status === "ACTIVE" ? "#146747" : status === "EXPIRED" || status === "SUSPENDED" ? "#9f3232" : "#102b5a";
-  ctx.beginPath();
-  ctx.roundRect(badgeX, badgeY, badgeWidth, 54, 27);
-  ctx.fill();
-  ctx.fillStyle = "#ffffff";
-  ctx.fillText(status, WIDTH / 2, badgeY + 27);
+  // Approved cards intentionally omit the green ACTIVE pill; the QR remains
+  // the authoritative source for live membership verification.
+  if (status !== "ACTIVE") {
+    ctx.font = "bold 27px Arial, sans-serif";
+    const badgeWidth = Math.max(175, ctx.measureText(status).width + 62);
+    const badgeX = (WIDTH - badgeWidth) / 2;
+    const badgeY = 1095;
+    ctx.fillStyle = status === "EXPIRED" || status === "SUSPENDED" ? "#9f3232" : "#102b5a";
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeWidth, 54, 27);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(status, WIDTH / 2, badgeY + 27);
+  }
 
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("Card image could not be generated.");
