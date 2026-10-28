@@ -1,5 +1,6 @@
 import {ClubLogo} from "./components/club-logo";
 import {getClubAdmin} from "./admin-auth";
+import RecentlySignedOutGreeting from "./components/recently-signed-out-greeting";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function PortalHome(){
      </div>
     </div>
    ) : (
-    <div className="gateway-intro"><p className="eyebrow">JOIN THE POPA FAMILY</p><h2>Welcome to POPA Membership</h2><p>Join the Township Rollers family by submitting your membership details. After registration, contact the membership administrator on WhatsApp.</p></div>
+    <RecentlySignedOutGreeting/>
    )}
    <div className="gateway-grid">
     <article className="access-card member-access"><span className="access-number">01</span><h3>POPA Membership Registration</h3><p>Complete your registration details and send them to the membership office.</p><a href="/register">Start Membership Registration <span>→</span></a><small>2026–2027 season membership</small></article>

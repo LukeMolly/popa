@@ -8,5 +8,5 @@ export default async function AdminPage(){
  const admin=await getClubAdmin();
  if(!admin) redirect("/admin-login?return_to=/admin");
  if(!["executive","membership"].includes(admin.role)) return <main className="access-denied"><span className="mini-crest">TR</span><h1>Membership administrator access required</h1><p>This administrator role does not manage membership records.</p><div><a href="/office">Go to assigned administration area</a></div></main>;
- return <><AdminIdleGuard/><MemberRegistry/></>;
+ return <><AdminIdleGuard firstName={admin.name || "Administrator"}/><MemberRegistry/></>;
 }

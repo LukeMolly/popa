@@ -1,11 +1,13 @@
 "use client";
 import { useEffect } from "react";
+import { rememberAdminFirstName } from "./post-signout-greeting";
 
 const IDLE_MS = 5 * 60 * 1000;
 const HEARTBEAT_THROTTLE_MS = 10 * 1000;
 
-export default function AdminIdleGuard() {
+export default function AdminIdleGuard({ firstName }: { firstName?: string }) {
   useEffect(() => {
+    if (firstName) rememberAdminFirstName(firstName);
     let lastActivity = Date.now();
     let lastHeartbeat = Date.now();
     let sending = false;
@@ -43,6 +45,6 @@ export default function AdminIdleGuard() {
       events.forEach(event => document.removeEventListener(event, onActivity));
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [firstName]);
   return null;
 }

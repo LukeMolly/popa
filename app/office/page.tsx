@@ -6,5 +6,5 @@ export const dynamic = "force-dynamic";
 export default async function Office() {
   const admin = await getClubAdmin();
   if (!admin) redirect("/admin-login?return_to=/office");
-  return <><AdminIdleGuard/><OfficeClient role={admin.role} name={admin.name || admin.email} /></>;
+  return <><AdminIdleGuard firstName={admin.name || "Administrator"}/><OfficeClient role={admin.role} name={admin.name || admin.email} /></>;
 }
