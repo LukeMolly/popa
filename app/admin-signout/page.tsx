@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import { ClubLogo } from "../components/club-logo";
+import { confirmSignedOutGreeting } from "../components/post-signout-greeting";
 
 type SignOutStatus = "signing-out" | "done" | "error";
 
@@ -30,6 +31,8 @@ export default function AdminSignOut() {
       // the framework's unbranded confirmation page.
       const result = await signOut({ redirect: false });
       if (!result?.url) throw new Error("Could not confirm the sign-out.");
+      // Display-only first name is remembered briefly; all login sessions are gone.
+      confirmSignedOutGreeting();
       setStatus("done");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Sign-out failed. Please retry.");
