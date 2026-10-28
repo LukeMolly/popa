@@ -28,8 +28,8 @@ export async function downloadMembershipCard(member: DownloadCard, qr: string): 
   ctx.fillStyle = "#102b5a";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "900 28px Arial, sans-serif";
-  ctx.fillText("SEASONAL ACCESS PASS", WIDTH / 2, 505, 930);
+  ctx.font = "900 38px Arial, sans-serif";
+  ctx.fillText("MEMBERSHIP CARD", WIDTH / 2, 505, 930);
 
   const fullName = `${member.firstName} ${member.lastName}`.trim();
   let fontSize = 58;
