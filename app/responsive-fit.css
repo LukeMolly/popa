@@ -486,3 +486,17 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     transition: none;
   }
 }
+
+
+/* Membership directory filters: responsive enhancement, no workflow changes. */
+.app .member-status-filter{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#344963;min-width:0}
+.app .member-status-filter select{min-height:44px;max-width:100%;padding:9px 12px;border:1px solid #b9c7da;border-radius:8px;background:#fff;color:#17253b}
+@media(max-width:640px){
+ .app .stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+ .app .stats>div{padding:12px 8px;min-width:0}
+ .app .stats strong{font-size:clamp(18px,5vw,28px)}
+ .app .panel-head{flex-wrap:wrap}
+ .app .panel-head .search{min-width:0;flex:1 1 100%}
+ .app .member-status-filter{flex:1 1 100%;justify-content:space-between}
+ .app .member-status-filter select{flex:1;min-width:0}
+}
