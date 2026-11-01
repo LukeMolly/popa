@@ -1,13 +1,15 @@
 import { DB } from "../../../lib/platform";
 const env = { DB };
-import { isClubAdmin } from "../../admin-auth";
+import { getClubAdmin } from "../../admin-auth";
+import { PAYMENT_METHOD_CODES, paymentMethodLabel } from "../../../lib/payment-methods";
 import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
 export const dynamic = "force-dynamic";
 const clean = (x:unknown,n=200) => typeof x==="string" ? x.trim().slice(0,n) : "";
 const fail = (message:string,status=400) => Response.json({error:message},{status});
 export async function POST(request:Request) {
   if (!isTrustedWrite(request)) return writeDenied();
-  if (!(await isClubAdmin(["executive","membership"]))) return fail("Membership administrator access required.",403);
+  const admin = await getClubAdmin();
+  if (!admin || !["executive","membership"].includes(admin.role)) return fail("Membership administrator access required.",403);
   try {
     const data = await request.json() as Record<string,unknown>, db=env.DB, now=new Date().toISOString();
     if(data.action==="member") {
@@ -18,6 +20,44 @@ export async function POST(request:Request) {
       await db.prepare("INSERT INTO members (id,first_name,last_name,phone,email,status,expires_at,token,created_at) VALUES (?,?,?,?,?,?,?,?,?)")
         .bind(id,first,last,clean(data.phone,30),clean(data.email,160),"pending",clean(data.expiresAt,10),token,now).run();
       return Response.json({id});
+    }
+    if(data.action==="offline-pop-approve") {
+      const memberId=clean(data.id,30);
+      const method=clean(data.method,30).toLowerCase();
+      const methodDetail=clean(data.methodDetail,120);
+      const proofChannel=clean(data.proofChannel,30).toLowerCase();
+      const reference=clean(data.reference,100);
+      const note=clean(data.note,300);
+      const channels:Record<string,string>={
+        whatsapp:"WhatsApp",
+        bank_statement:"bank statement",
+        in_person:"physical receipt / in-person verification",
+        other:"other verified evidence"
+      };
+      if(!memberId) return fail("Choose a valid member.");
+      if(!PAYMENT_METHOD_CODES.includes(method)) return fail("Choose a valid bank or payment method.");
+      if(method==="other" && methodDetail.length<2) return fail("Describe the other payment method.");
+      if(!channels[proofChannel]) return fail("Choose how the offline payment evidence was verified.");
+      if(reference.length<3) return fail("Enter a payment reference or receipt number (at least 3 characters).");
+      const paymentId=crypto.randomUUID();
+      const paymentNote="Offline POP verified via "+channels[proofChannel]+"; payment method: "+paymentMethodLabel(method,methodDetail)+(note?"; note: "+note:"");
+      // A single PostgreSQL statement records the P200 payment only if it
+      // activates an eligible pending member. A concurrent retry cannot
+      // activate the same member twice. Existing payment rows are never replaced.
+      const result=await db.prepare(
+        "WITH activated AS ("+
+        " UPDATE members m SET status='active',expires_at='2027-07-31'"+
+        " WHERE m.id=? AND m.status='pending' AND m.risk_status='none'"+
+        " AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.member_id=m.id)"+
+        " RETURNING m.id"+
+        "), recorded AS ("+
+        " INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at,reviewed_by,payment_method,payment_method_detail)"+
+        " SELECT ?,a.id,200,'','','',?,'approved',?,?,?,?,?,? FROM activated a"+
+        " RETURNING id"+
+        ") SELECT (SELECT COUNT(*) FROM recorded)::int AS recorded"
+      ).bind(memberId,paymentId,reference,paymentNote,now,now,admin.email,method,method==="other"?methodDetail:"").first() as {recorded:number}|null;
+      if(Number(result?.recorded)!==1) return fail("Offline approval was not recorded. The member may be active, flagged for review, or already have a payment record. Refresh the registry.",409);
+      return Response.json({ok:true,paymentId,status:"active",paymentStatus:"approved",expiresAt:"2027-07-31"});
     }
     if(data.action==="status") {
       const id=clean(data.id,30),status=clean(data.status,20);
