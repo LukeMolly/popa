@@ -26,7 +26,8 @@ export default function OfflinePaymentApproval({
   const [method,setMethod]=useState("fnb");
   const [busy,setBusy]=useState(false);
 
-  if(member.status!=="pending") return null;
+  if(member.status!=="pending" && member.status!=="active") return null;
+  const alreadyActive=member.status==="active";
   const hasPayment=!!member.paymentStatus;
   const isFlagged=member.riskStatus!=="none";
 
@@ -41,14 +42,14 @@ export default function OfflinePaymentApproval({
       reference:String(form.get("reference")||"").trim(),
       note:String(form.get("note")||"").trim()
     };
-    if(!window.confirm("Confirm verified P200 offline payment for "+member.firstName+" "+member.lastName+" ("+member.id+")? This will record an approved payment and activate the membership."))return;
+    if(!window.confirm("Confirm verified P200 offline payment for "+member.firstName+" "+member.lastName+" ("+member.id+")? "+(alreadyActive?"This will record the payment without changing the current membership status or expiry.":"This will record an approved payment and activate the membership.")))return;
     setBusy(true);
     try{await onApprove(details)}finally{setBusy(false)}
   }
 
   return <section className="panel offline-pop-panel" aria-label="Offline payment approval">
     <p className="eyebrow">OFFLINE PAYMENT VERIFICATION</p>
-    <h2>Approve offline POP · P200</h2>
+    <h2>{alreadyActive?"Record verified offline POP · P200":"Approve offline POP · P200"}</h2>
     <p className="hint">For bank deposits, WhatsApp POP or payments verified outside the member portal. Check the actual payment evidence before approving.</p>
     {isFlagged?
       <p role="alert">This membership has an identity flag. Resolve the flag before approving an offline payment.</p>
@@ -81,9 +82,9 @@ export default function OfflinePaymentApproval({
       <label className="field">Verification note (optional)
         <textarea name="note" rows={2} maxLength={300} disabled={busy} placeholder="Additional information about verification"/>
       </label>
-      <p className="hint">Confirmation will record one approved P200 payment, your administrator identity and review time, and activate this member until 31 July 2027.</p>
+      <p className="hint">{alreadyActive?"Confirmation will record one approved P200 payment with your administrator identity and review time. The existing Active status and expiry date will remain unchanged.":"Confirmation will record one approved P200 payment, your administrator identity and review time, and activate this member until 31 July 2027."}</p>
       <div className="form-actions">
-        <button type="submit" className="primary" disabled={busy}>{busy?"Recording approval…":"Approve P200 & activate"}</button>
+        <button type="submit" className="primary" disabled={busy}>{busy?"Recording approval…":alreadyActive?"Record approved P200 payment":"Approve P200 & activate"}</button>
       </div>
     </form>}
   </section>;
