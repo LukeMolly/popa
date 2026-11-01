@@ -39,25 +39,27 @@ export async function POST(request:Request) {
       if(method==="other" && methodDetail.length<2) return fail("Describe the other payment method.");
       if(!Object.hasOwn(channels,proofChannel)) return fail("Choose how the offline payment evidence was verified.");
       if(reference.length<3) return fail("Enter a payment reference or receipt number (at least 3 characters).");
-      const paymentId=crypto.randomUUID();
+      // Member-scoped ID prevents repeated offline payment records, including simultaneous requests.
+      const paymentId="offline-"+memberId;
       const paymentNote="Offline POP verified via "+channels[proofChannel]+"; payment method: "+paymentMethodLabel(method,methodDetail)+(note?"; note: "+note:"");
       // A single PostgreSQL statement records the P200 payment only if it
       // activates an eligible pending member. A concurrent retry cannot
       // activate the same member twice. Existing payment rows are never replaced.
       const result=await db.prepare(
         "WITH activated AS ("+
-        " UPDATE members m SET status='active',expires_at='2027-07-31'"+
-        " WHERE m.id=? AND m.status='pending' AND m.risk_status='none'"+
+        " UPDATE members m SET status='active',expires_at=CASE WHEN m.status='pending' THEN '2027-07-31' ELSE m.expires_at END"+
+        " WHERE m.id=? AND m.status IN ('pending','active') AND m.risk_status='none'"+
         " AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.member_id=m.id)"+
-        " RETURNING m.id"+
+        " RETURNING m.id,m.expires_at"+
         "), recorded AS ("+
         " INSERT INTO payments (id,member_id,amount,receipt_key,receipt_name,receipt_type,reference,status,note,created_at,reviewed_at,reviewed_by,payment_method,payment_method_detail)"+
         " SELECT ?,a.id,200,'','','',?,'approved',?,?,?,?,?,? FROM activated a"+
-        " RETURNING id"+
-        ") SELECT (SELECT COUNT(*) FROM recorded)::int AS recorded"
-      ).bind(memberId,paymentId,reference,paymentNote,now,now,admin.email,method,method==="other"?methodDetail:"").first() as {recorded:number}|null;
+        " ON CONFLICT (id) DO NOTHING RETURNING id"+
+        ") SELECT (SELECT COUNT(*) FROM recorded)::int AS recorded,"+
+        " (SELECT expires_at FROM activated LIMIT 1) AS expires_at"
+      ).bind(memberId,paymentId,reference,paymentNote,now,now,admin.email,method,method==="other"?methodDetail:"").first() as {recorded:number;expires_at:string|null}|null;
       if(Number(result?.recorded)!==1) return fail("Offline approval was not recorded. The member may be active, flagged for review, or already have a payment record. Refresh the registry.",409);
-      return Response.json({ok:true,paymentId,status:"active",paymentStatus:"approved",expiresAt:"2027-07-31"});
+      return Response.json({ok:true,paymentId,status:"active",paymentStatus:"approved",expiresAt:result?.expires_at||""});
     }
     if(data.action==="status") {
       const id=clean(data.id,30),status=clean(data.status,20);
