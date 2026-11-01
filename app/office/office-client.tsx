@@ -211,7 +211,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
                   <td>{pula(Number(p.amount)||0)}</td>
                   <td>{p.reference || "—"}</td>
                   <td>
-                    {p.receiptName ? <a href={"/api/staff/receipt/" + encodeURIComponent(p.id)} target="_blank" rel="noopener noreferrer">View {p.receiptName}</a> : <span>Awaiting WhatsApp POP</span>}
+                    {p.receiptName ? <a href={"/api/staff/receipt/" + encodeURIComponent(p.id)} target="_blank" rel="noopener noreferrer">View {p.receiptName}</a> : <span>{p.status==="approved"?"Offline POP verified / no upload":p.status==="rejected"?"No POP uploaded":"Awaiting WhatsApp POP"}</span>}
                   </td>
                   <td>
                     <span className={"badge " + p.status}>{p.status}</span>
