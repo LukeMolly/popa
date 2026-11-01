@@ -10,7 +10,7 @@ export async function GET(){
  if(!admin)return error("Administrator access required.",403);
  try{
   const [payments,fixtures,standings,settings,players]=await Promise.all([
-   env.DB.prepare("SELECT p.id,p.member_id AS memberId,m.first_name AS firstName,m.last_name AS lastName,p.amount,p.reference,p.receipt_name AS receiptName,p.status,p.note,p.created_at AS createdAt,p.reviewed_at AS reviewedAt FROM payments p JOIN members m ON m.id=p.member_id ORDER BY p.created_at DESC").all(),
+   env.DB.prepare("SELECT p.id,p.member_id AS memberId,m.first_name AS firstName,m.last_name AS lastName,p.amount,p.reference,p.receipt_name AS receiptName,p.status,p.note,p.created_at AS createdAt,p.reviewed_at AS reviewedAt,p.reviewed_by AS reviewedBy FROM payments p JOIN members m ON m.id=p.member_id ORDER BY p.created_at DESC").all(),
    env.DB.prepare("SELECT id,opponent,kickoff,venue,home_away AS homeAway,competition,status,rollers_score AS rollersScore,opponent_score AS opponentScore FROM fixtures ORDER BY kickoff DESC").all(),
    env.DB.prepare("SELECT team,played,won,drawn,lost,goal_difference AS goalDifference,points,updated_at AS updatedAt FROM standings ORDER BY points DESC,goal_difference DESC").all(),
    env.DB.prepare("SELECT membership_validity_days AS membershipValidityDays,expiry_reminder_days AS expiryReminderDays FROM club_settings WHERE id=1").first(),
@@ -43,7 +43,7 @@ export async function POST(request:Request){
     "), payment_review AS (" +
     " UPDATE payments p SET status=?," +
     " note=CASE WHEN ?='' THEN p.note WHEN p.note='' THEN 'Review: ' || ? ELSE p.note || '; Review: ' || ? END," +
-    " reviewed_at=? FROM eligible e" +
+    " reviewed_at=?, reviewed_by=? FROM eligible e" +
     " WHERE p.id=e.id AND p.status='submitted' RETURNING p.member_id" +
     "), member_activation AS (" +
     " UPDATE members m SET status='active',expires_at=?" +
@@ -51,7 +51,7 @@ export async function POST(request:Request){
     " RETURNING m.id" +
     ") SELECT (SELECT COUNT(*) FROM payment_review)::int AS reviewed," +
     " (SELECT COUNT(*) FROM member_activation)::int AS activated"
-   ).bind(id,status,note,note,note,now,"2027-07-31",status).first() as {reviewed:number;activated:number}|null;
+   ).bind(id,status,note,note,note,now,admin.email,"2027-07-31",status).first() as {reviewed:number;activated:number}|null;
    if(Number(reviewed?.reviewed)!==1 || (status==="approved" && Number(reviewed?.activated)!==1)){
     return error("Payment is no longer awaiting review.",409);
    }

@@ -13,6 +13,8 @@ type Payment = {
   status: string;
   note: string;
   createdAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
 };
 type Fixture = {
   id: string;
@@ -214,6 +216,7 @@ export default function Office({role,name}:{role:AdminRole;name:string}) {
                   <td>
                     <span className={"badge " + p.status}>{p.status}</span>
                     {p.note && <small className="office-note">{p.note}</small>}
+                    {p.status !== "submitted" && p.reviewedBy && <small className="office-note">Reviewed by {p.reviewedBy}{p.reviewedAt ? ` · ${new Date(p.reviewedAt).toLocaleString("en-BW")}` : ""}</small>}
                   </td>
                   <td>
                     {p.status === "submitted" ? (
