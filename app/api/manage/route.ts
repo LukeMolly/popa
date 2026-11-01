@@ -37,7 +37,7 @@ export async function POST(request:Request) {
       if(!memberId) return fail("Choose a valid member.");
       if(!PAYMENT_METHOD_CODES.some(code=>code===method)) return fail("Choose a valid bank or payment method.");
       if(method==="other" && methodDetail.length<2) return fail("Describe the other payment method.");
-      if(!channels[proofChannel]) return fail("Choose how the offline payment evidence was verified.");
+      if(!Object.hasOwn(channels,proofChannel)) return fail("Choose how the offline payment evidence was verified.");
       if(reference.length<3) return fail("Enter a payment reference or receipt number (at least 3 characters).");
       const paymentId=crypto.randomUUID();
       const paymentNote="Offline POP verified via "+channels[proofChannel]+"; payment method: "+paymentMethodLabel(method,methodDetail)+(note?"; note: "+note:"");
