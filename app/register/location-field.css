@@ -122,7 +122,7 @@
   transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
 .membership-branch-select:invalid {
-  color: #ffdf89;
+  color: #fff;
 }
 .membership-branch-select:hover {
   background-color: #123b7a;
@@ -140,13 +140,15 @@
   font-weight: 650;
 }
 .membership-branch-select option:checked {
-  background-color: #f6b519;
-  color: #071a39;
+  background-color: #123b7a;
+  color: #fff;
+  box-shadow: inset 5px 0 0 #ffcf24;
 }
 .membership-branch-select option:hover,
 .membership-branch-select option:focus {
-  background-color: #f6b519;
-  color: #071a39;
+  background-color: #174b9b;
+  color: #fff;
+  box-shadow: inset 5px 0 0 #ffcf24;
 }
 @media (prefers-reduced-motion: reduce) {
   .membership-branch-select { transition: none; }
