@@ -92,31 +92,62 @@
   .date-picker-field > button { width: 40px; height: 40px; }
 }
 
-/* Membership branch selector: accessible native dropdown on mobile and laptop. */
+/* Membership branch selector: POPA navy-and-gold, native keyboard/touch access.
+   Some phones display the option list with the operating system's picker colours. */
 .membership-branch-select {
   display: block;
   width: 100%;
   min-width: 0;
-  min-height: 48px;
-  padding: 10px 14px;
-  border: 1px solid #cdd7e5;
+  min-height: 50px;
+  padding: 11px 46px 11px 15px;
+  border: 2px solid #f6b519;
   border-radius: 10px;
-  background: #fbfcff;
-  color: #07162f;
+  background-color: #0c244b;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #f6b519 50%),
+    linear-gradient(135deg, #f6b519 50%, transparent 50%);
+  background-position: calc(100% - 23px) 22px, calc(100% - 17px) 22px;
+  background-repeat: no-repeat;
+  background-size: 6px 6px;
+  color: #fff;
+  -webkit-text-fill-color: currentColor;
+  -webkit-appearance: none;
+  appearance: none;
   font: inherit;
   font-size: 16px;
+  font-weight: 750;
   line-height: 1.4;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(7,26,57,.12);
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
 .membership-branch-select:invalid {
-  color: #64748b;
+  color: #ffdf89;
+}
+.membership-branch-select:hover {
+  background-color: #123b7a;
 }
 .membership-branch-select:focus-visible {
   outline: 3px solid #ffcf24;
-  outline-offset: 2px;
-  border-color: #0755d9;
+  outline-offset: 3px;
+  border-color: #ffd45b;
+  background-color: #123b7a;
+  box-shadow: 0 0 0 2px rgba(255,207,36,.18);
 }
 .membership-branch-select option {
-  color: #07162f;
-  background: #fff;
+  background-color: #0c244b;
+  color: #fff;
+  font-weight: 650;
+}
+.membership-branch-select option:checked {
+  background-color: #f6b519;
+  color: #071a39;
+}
+.membership-branch-select option:hover,
+.membership-branch-select option:focus {
+  background-color: #f6b519;
+  color: #071a39;
+}
+@media (prefers-reduced-motion: reduce) {
+  .membership-branch-select { transition: none; }
 }
