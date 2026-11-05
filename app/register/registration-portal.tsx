@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PAYMENT_METHODS } from "../../lib/payment-methods";
+import { MEMBERSHIP_BRANCHES } from "../../lib/membership-branches";
 
 const adminWhatsApp = "26777800040";
 const adminWhatsAppDisplay = "+267 77 800 040";
@@ -128,7 +129,12 @@ const [identityKind, setIdentityKind] = useState<"omang" | "passport">("omang");
                 <Field label="Place of birth"><Input name="placeOfBirth" required minLength={2} maxLength={120} placeholder="Town or village" autoComplete="address-level2"/></Field>
                 <Field label="Email address"><Input name="email" required type="email" maxLength={160} defaultValue={accountEmail} placeholder="name@example.com"/></Field>
                 <Field label="Mobile number" hint="Include country code, e.g. +267 7X XXX XXX"><Input name="phone" required type="tel" maxLength={20} placeholder="+267 7X XXX XXX" autoComplete="tel"/></Field>
-                <Field label="Membership location"><Input name="membershipLocation" required maxLength={100} placeholder="Enter your branch or town"/></Field>
+                <Field label="Membership branch">
+                  <select name="membershipLocation" className="membership-branch-select" required defaultValue="" aria-label="Select your Township Rollers FC membership branch">
+                    <option value="" disabled>Select your membership branch</option>
+                    {MEMBERSHIP_BRANCHES.map(branch => <option key={branch} value={branch}>{branch}</option>)}
+                  </select>
+                </Field>
                 <Field label="Gender">
                   <RadioGroup value={gender} onValueChange={setGender} className="gender-row" required>
                     {["Female", "Male", "Other"].map(item => <label className="radio-card" key={item}><RadioGroupItem value={item.toLowerCase()}/>{item}</label>)}
