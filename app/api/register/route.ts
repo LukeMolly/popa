@@ -1,5 +1,6 @@
 import { DB, deleteReceipt, uploadReceipt } from "../../../lib/platform";
 import { PAYMENT_METHOD_CODES, paymentMethodLabel } from "../../../lib/payment-methods";
+import { isMembershipBranch } from "../../../lib/membership-branches";
 import { isTrustedWrite, writeDenied } from "../../../lib/request-security";
 import { isRegistrationRateAllowed, readLimitedRegistrationForm } from "../../../lib/registration-security";
 
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
     if (Number.isNaN(birthDate.getTime()) || birthDate.toISOString().slice(0, 10) !== dateOfBirth ||
         birthDate > now || birthDate.getUTCFullYear() < now.getUTCFullYear() - 120) return fail("Enter a valid date of birth.");
     if (placeOfBirth.length < 2 || placeOfBirth.length > 120) return fail("Enter a valid place of birth.");
-    if (membershipLocation.length < 2 || membershipLocation.length > 100) return fail("Enter a valid membership location.");
+    if (!isMembershipBranch(membershipLocation)) return fail("Select a valid Township Rollers FC membership branch.");
     if (!["female", "male", "other"].includes(gender)) return fail("Choose a valid gender.");
     if (email.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Enter a valid email address.");
     if (!/^\+?[0-9\s-]+$/.test(phone) || phoneDigits.length < 7 || phoneDigits.length > 15) return fail("Enter a valid mobile number, including its country code.");
