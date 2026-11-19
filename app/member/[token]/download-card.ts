@@ -1,6 +1,6 @@
 "use client";
 
-type DownloadCard = { id: string; firstName: string; lastName: string; status: string };
+type DownloadCard = { id: string; firstName: string; lastName: string; status: string; branch?: string };
 const WIDTH = 1098;
 const HEIGHT = 1536;
 
@@ -40,11 +40,23 @@ export async function downloadMembershipCard(member: DownloadCard, qr: string): 
   } while (fontSize > 24);
   ctx.fillText(fullName, WIDTH / 2, 598, 950);
   ctx.font = "bold 32px monospace";
-  ctx.fillText(member.id, WIDTH / 2, 685, 930);
+  ctx.fillText(member.id, WIDTH / 2, 660, 930);
+
+  // Show the recorded branch without changing the original card artwork.
+  const branch = (member.branch || "No Branch").trim();
+  let branchFontSize = 37;
+  do {
+    ctx.font = `bold ${branchFontSize}px Arial, sans-serif`;
+    if (ctx.measureText(branch).width <= 880) break;
+    branchFontSize -= 2;
+  } while (branchFontSize > 20);
+  ctx.fillStyle = "#b37d00";
+  ctx.fillText(branch, WIDTH / 2, 717, 880);
+  ctx.fillStyle = "#102b5a";
 
   const qrSize = 290;
   const qrX = (WIDTH - qrSize) / 2;
-  const qrY = 739;
+  const qrY = 770;
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24);
   ctx.drawImage(code, qrX, qrY, qrSize, qrSize);
