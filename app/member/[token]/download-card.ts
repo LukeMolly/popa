@@ -1,11 +1,10 @@
 "use client";
 
-type DownloadCard = { id: string; firstName: string; lastName: string; status: string; branch?: string };
+export type DownloadCard = { id: string; firstName: string; lastName: string; status: string; branch?: string };
 // CR80 portrait card for Evolis Badgy100: 53.98 × 85.60 mm at 300 dpi.
 const WIDTH = 638;
 const HEIGHT = 1011;
-const DESIGN_WIDTH = 1098;
-const DESIGN_HEIGHT = 1536;
+const ARTWORK = "/rollers-membership-card.webp";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -19,7 +18,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 export async function renderMembershipCardBlob(member: DownloadCard, qr: string): Promise<Blob> {
   if (!qr) throw new Error("Verification QR code is not ready yet.");
   const [artwork, code] = await Promise.all([
-    loadImage("/township-rollers-season-ticket.jpg"),
+    loadImage(ARTWORK),
     loadImage(qr),
   ]);
   const canvas = document.createElement("canvas");
@@ -27,68 +26,46 @@ export async function renderMembershipCardBlob(member: DownloadCard, qr: string)
   canvas.height = HEIGHT;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("This browser cannot export the card.");
-  // Scale the original card artwork and all overlay coordinates together.
-  ctx.scale(WIDTH / DESIGN_WIDTH, HEIGHT / DESIGN_HEIGHT);
-  ctx.drawImage(artwork, 0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
-  ctx.fillStyle = "#102b5a";
+  ctx.drawImage(artwork, 0, 0, WIDTH, HEIGHT);
+  ctx.fillStyle = "#082563";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  // Cover the old season-ticket title printed in the artwork.
-  ctx.fillStyle = "#102b5a";
-  ctx.fillRect(88, 363, 922, 82);
-  ctx.strokeStyle = "#ffd15a";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(88, 363, 922, 82);
-  ctx.fillStyle = "#ffd15a";
-  ctx.font = "900 47px Arial, sans-serif";
-  ctx.fillText("MEMBERSHIP CARD", DESIGN_WIDTH / 2, 404, 910);
-  ctx.fillStyle = "#102b5a";
+  ctx.font = "900 31px Arial, sans-serif";
+  const name = `${member.firstName} ${member.lastName}`.trim().toUpperCase();
+  ctx.fillText(name, WIDTH / 2, 459, WIDTH - 48);
 
-  const fullName = `${member.firstName} ${member.lastName}`.trim();
-  let fontSize = 75;
-  do {
-    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-    if (ctx.measureText(fullName).width <= 950) break;
-    fontSize -= 2;
-  } while (fontSize > 24);
-  ctx.fillText(fullName, DESIGN_WIDTH / 2, 575, 950);
-  ctx.font = "bold 43px Arial, sans-serif";
-  ctx.fillText(`Membership ID: ${member.id}`, DESIGN_WIDTH / 2, 675, 930);
-
-  // Show the recorded branch without changing the original card artwork.
-  const branch = (member.branch || "No Branch").trim();
-  const branchLabel = `Branch name: ${branch}`;
-  let branchFontSize = 40;
-  do {
-    ctx.font = `bold ${branchFontSize}px Arial, sans-serif`;
-    if (ctx.measureText(branchLabel).width <= 880) break;
-    branchFontSize -= 2;
-  } while (branchFontSize > 20);
-  ctx.fillStyle = "#b37d00";
-  ctx.fillText(branchLabel, DESIGN_WIDTH / 2, 740, 880);
-  ctx.fillStyle = "#102b5a";
-
-  const qrSize = 290;
-  const qrX = (DESIGN_WIDTH - qrSize) / 2;
-  const qrY = 795;
+  ctx.fillStyle = "#092b70";
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(88, 496, 462, 42, 21);
+  ctx.fill();
+  ctx.stroke();
+  const label = "Membership Branch: ";
+  const branch = member.branch?.trim() || "No Branch";
+  ctx.font = "bold 20px Arial, sans-serif";
+  const labelWidth = ctx.measureText(label).width;
+  const textWidth = labelWidth + ctx.measureText(branch).width;
+  ctx.save();
+  ctx.translate(WIDTH / 2, 518);
+  ctx.scale(Math.min(1, 436 / textWidth), 1);
+  ctx.textAlign = "left";
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24);
-  ctx.drawImage(code, qrX, qrY, qrSize, qrSize);
+  ctx.fillText(label, -textWidth / 2, 0);
+  ctx.fillStyle = "#ffdc05";
+  ctx.fillText(branch, labelWidth - textWidth / 2, 0);
+  ctx.restore();
 
-  const status = member.status.toUpperCase();
-  // Approved cards intentionally omit the green ACTIVE pill; the QR remains
-  // the authoritative source for live membership verification.
-  if (status !== "ACTIVE") {
-    ctx.font = "bold 27px Arial, sans-serif";
-    const badgeWidth = Math.max(175, ctx.measureText(status).width + 62);
-    const badgeX = (DESIGN_WIDTH - badgeWidth) / 2;
-    const badgeY = 1095;
-    ctx.fillStyle = status === "EXPIRED" || status === "SUSPENDED" ? "#9f3232" : "#102b5a";
-    ctx.beginPath();
-    ctx.roundRect(badgeX, badgeY, badgeWidth, 54, 27);
-    ctx.fill();
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(status, DESIGN_WIDTH / 2, badgeY + 27);
+  ctx.fillStyle = "#082563";
+  ctx.font = "bold 25px Arial, sans-serif";
+  ctx.fillText(`Membership ID: ${member.id}`, WIDTH / 2, 578, WIDTH - 48);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(code, 218, 615, 202, 202);
+
+  if (member.status.toLowerCase() !== "active") {
+    ctx.fillStyle = "#812b24";
+    ctx.font = "bold 16px Arial, sans-serif";
+    ctx.fillText(member.status.toUpperCase(), WIDTH / 2, 839, WIDTH - 48);
   }
 
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
