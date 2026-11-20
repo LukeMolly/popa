@@ -38,7 +38,7 @@ export async function zipFiles(files: {name:string; blob:Blob}[]): Promise<Blob>
     put16(ch,28,name.length);put16(ch,30,0);put16(ch,32,0);
     put16(ch,34,0);put16(ch,36,0);put32(ch,38,0);put32(ch,42,offset);
     central.set(name,46);
-    parts.push(local, data);directory.push(central);
+    parts.push(local.buffer as ArrayBuffer, data.buffer as ArrayBuffer);directory.push(central);
     offset+=local.length+data.length;
   }
   const directorySize=directory.reduce((sum,chunk)=>sum+chunk.length,0);
@@ -47,7 +47,7 @@ export async function zipFiles(files: {name:string; blob:Blob}[]): Promise<Blob>
   put32(footer,0,0x06054b50);put16(footer,4,0);put16(footer,6,0);
   put16(footer,8,files.length);put16(footer,10,files.length);
   put32(footer,12,directorySize);put32(footer,16,offset);put16(footer,20,0);
-  return new Blob([...parts,...directory,end],{type:"application/zip"});
+  return new Blob([...parts,...directory.map(entry=>entry.buffer as ArrayBuffer),end.buffer as ArrayBuffer],{type:"application/zip"});
 }
 
 export function saveBlob(blob:Blob, filename:string) {
