@@ -70,7 +70,7 @@ export async function renderMembershipCardBlob(member: DownloadCard, qr: string)
 
   const qrSize = 290;
   const qrX = (DESIGN_WIDTH - qrSize) / 2;
-  const qrY = 815;
+  const qrY = 795;
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24);
   ctx.drawImage(code, qrX, qrY, qrSize, qrSize);
