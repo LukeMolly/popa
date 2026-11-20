@@ -16,7 +16,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-export async function downloadMembershipCard(member: DownloadCard, qr: string): Promise<void> {
+export async function renderMembershipCardBlob(member: DownloadCard, qr: string): Promise<Blob> {
   if (!qr) throw new Error("Verification QR code is not ready yet.");
   const [artwork, code] = await Promise.all([
     loadImage("/township-rollers-season-ticket.jpg"),
@@ -72,7 +72,7 @@ export async function downloadMembershipCard(member: DownloadCard, qr: string): 
   if (status !== "ACTIVE") {
     ctx.font = "bold 27px Arial, sans-serif";
     const badgeWidth = Math.max(175, ctx.measureText(status).width + 62);
-    const badgeX = (WIDTH - badgeWidth) / 2;
+    const badgeX = (DESIGN_WIDTH - badgeWidth) / 2;
     const badgeY = 1095;
     ctx.fillStyle = status === "EXPIRED" || status === "SUSPENDED" ? "#9f3232" : "#102b5a";
     ctx.beginPath();
@@ -84,6 +84,11 @@ export async function downloadMembershipCard(member: DownloadCard, qr: string): 
 
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("Card image could not be generated.");
+  return blob;
+}
+
+export async function downloadMembershipCard(member: DownloadCard, qr: string): Promise<void> {
+  const blob = await renderMembershipCardBlob(member, qr);
   const url = URL.createObjectURL(blob);
   try {
     const a = document.createElement("a");
