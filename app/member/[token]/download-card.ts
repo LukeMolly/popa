@@ -1,8 +1,11 @@
 "use client";
 
 type DownloadCard = { id: string; firstName: string; lastName: string; status: string; branch?: string };
-const WIDTH = 1098;
-const HEIGHT = 1536;
+// CR80 portrait card for Evolis Badgy100: 53.98 × 85.60 mm at 300 dpi.
+const WIDTH = 638;
+const HEIGHT = 1011;
+const DESIGN_WIDTH = 1098;
+const DESIGN_HEIGHT = 1536;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -24,12 +27,14 @@ export async function downloadMembershipCard(member: DownloadCard, qr: string): 
   canvas.height = HEIGHT;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("This browser cannot export the card.");
-  ctx.drawImage(artwork, 0, 0, WIDTH, HEIGHT);
+  // Scale the original card artwork and all overlay coordinates together.
+  ctx.scale(WIDTH / DESIGN_WIDTH, HEIGHT / DESIGN_HEIGHT);
+  ctx.drawImage(artwork, 0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
   ctx.fillStyle = "#102b5a";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = "900 38px Arial, sans-serif";
-  ctx.fillText("MEMBERSHIP CARD", WIDTH / 2, 505, 930);
+  ctx.fillText("MEMBERSHIP CARD", DESIGN_WIDTH / 2, 505, 930);
 
   const fullName = `${member.firstName} ${member.lastName}`.trim();
   let fontSize = 58;
@@ -38,9 +43,9 @@ export async function downloadMembershipCard(member: DownloadCard, qr: string): 
     if (ctx.measureText(fullName).width <= 950) break;
     fontSize -= 2;
   } while (fontSize > 24);
-  ctx.fillText(fullName, WIDTH / 2, 598, 950);
+  ctx.fillText(fullName, DESIGN_WIDTH / 2, 598, 950);
   ctx.font = "bold 32px monospace";
-  ctx.fillText(member.id, WIDTH / 2, 660, 930);
+  ctx.fillText(member.id, DESIGN_WIDTH / 2, 660, 930);
 
   // Show the recorded branch without changing the original card artwork.
   const branch = (member.branch || "No Branch").trim();
@@ -51,11 +56,11 @@ export async function downloadMembershipCard(member: DownloadCard, qr: string): 
     branchFontSize -= 2;
   } while (branchFontSize > 20);
   ctx.fillStyle = "#b37d00";
-  ctx.fillText(branch, WIDTH / 2, 717, 880);
+  ctx.fillText(branch, DESIGN_WIDTH / 2, 717, 880);
   ctx.fillStyle = "#102b5a";
 
   const qrSize = 290;
-  const qrX = (WIDTH - qrSize) / 2;
+  const qrX = (DESIGN_WIDTH - qrSize) / 2;
   const qrY = 770;
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24);
@@ -74,7 +79,7 @@ export async function downloadMembershipCard(member: DownloadCard, qr: string): 
     ctx.roundRect(badgeX, badgeY, badgeWidth, 54, 27);
     ctx.fill();
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(status, WIDTH / 2, badgeY + 27);
+    ctx.fillText(status, DESIGN_WIDTH / 2, badgeY + 27);
   }
 
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
