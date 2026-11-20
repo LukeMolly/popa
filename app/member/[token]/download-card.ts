@@ -33,35 +33,44 @@ export async function renderMembershipCardBlob(member: DownloadCard, qr: string)
   ctx.fillStyle = "#102b5a";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "900 38px Arial, sans-serif";
-  ctx.fillText("MEMBERSHIP CARD", DESIGN_WIDTH / 2, 505, 930);
+  // Cover the old season-ticket title printed in the artwork.
+  ctx.fillStyle = "#102b5a";
+  ctx.fillRect(88, 363, 922, 82);
+  ctx.strokeStyle = "#ffd15a";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(88, 363, 922, 82);
+  ctx.fillStyle = "#ffd15a";
+  ctx.font = "900 47px Arial, sans-serif";
+  ctx.fillText("MEMBERSHIP CARD", DESIGN_WIDTH / 2, 404, 910);
+  ctx.fillStyle = "#102b5a";
 
   const fullName = `${member.firstName} ${member.lastName}`.trim();
-  let fontSize = 58;
+  let fontSize = 75;
   do {
     ctx.font = `bold ${fontSize}px Arial, sans-serif`;
     if (ctx.measureText(fullName).width <= 950) break;
     fontSize -= 2;
   } while (fontSize > 24);
-  ctx.fillText(fullName, DESIGN_WIDTH / 2, 598, 950);
-  ctx.font = "bold 32px monospace";
-  ctx.fillText(member.id, DESIGN_WIDTH / 2, 660, 930);
+  ctx.fillText(fullName, DESIGN_WIDTH / 2, 575, 950);
+  ctx.font = "bold 43px Arial, sans-serif";
+  ctx.fillText(`Membership ID: ${member.id}`, DESIGN_WIDTH / 2, 675, 930);
 
   // Show the recorded branch without changing the original card artwork.
   const branch = (member.branch || "No Branch").trim();
-  let branchFontSize = 37;
+  const branchLabel = `Branch name: ${branch}`;
+  let branchFontSize = 40;
   do {
     ctx.font = `bold ${branchFontSize}px Arial, sans-serif`;
-    if (ctx.measureText(branch).width <= 880) break;
+    if (ctx.measureText(branchLabel).width <= 880) break;
     branchFontSize -= 2;
   } while (branchFontSize > 20);
   ctx.fillStyle = "#b37d00";
-  ctx.fillText(branch, DESIGN_WIDTH / 2, 717, 880);
+  ctx.fillText(branchLabel, DESIGN_WIDTH / 2, 740, 880);
   ctx.fillStyle = "#102b5a";
 
   const qrSize = 290;
   const qrX = (DESIGN_WIDTH - qrSize) / 2;
-  const qrY = 770;
+  const qrY = 795;
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24);
   ctx.drawImage(code, qrX, qrY, qrSize, qrSize);
